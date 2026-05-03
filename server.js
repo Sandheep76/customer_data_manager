@@ -199,6 +199,7 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
+      client_id, // <--- Add this to the destructuring
       assess_type,
       assess_full_name,
       name_on_report,
@@ -208,26 +209,39 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
       is_default,
     } = req.body;
 
-    const clientResult = await pool.query(
-      "SELECT client_id FROM assess_types WHERE id = $1",
-      [id],
-    );
-
-    // ADD THIS 404 CHECK HERE
-    if (clientResult.rows.length === 0) {
-      return res.status(404).json({ error: "Assess type not found" });
+    // Use the client_id from the request body if provided, otherwise fallback to DB
+    let targetClientId = client_id;
+    if (!targetClientId) {
+      const clientResult = await pool.query(
+        "SELECT client_id FROM assess_types WHERE id = $1",
+        [id],
+      );
+      if (clientResult.rows.length === 0) {
+        return res.status(404).json({ error: "Assess type not found" });
+      }
+      targetClientId = clientResult.rows[0].client_id;
     }
 
-    const client_id = clientResult.rows[0]?.client_id; // CHANGED from client_code
-
-    if (is_default && client_id) {
+    if (is_default && targetClientId) {
       await pool.query(
         "UPDATE assess_types SET is_default = false WHERE client_id = $1 AND id != $2",
-        [client_id, id],
+        [targetClientId, id],
       );
     }
+
+    // UPDATED QUERY: Added client_id = $8
     const result = await pool.query(
-      `UPDATE assess_types SET assess_type = $1, assess_full_name = $2, name_on_report = $3, assess_version = $4, assess_type_description = $5, is_active = $6, is_default = $7, updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *`,
+      `UPDATE assess_types SET 
+        assess_type = $1, 
+        assess_full_name = $2, 
+        name_on_report = $3, 
+        assess_version = $4, 
+        assess_type_description = $5, 
+        is_active = $6, 
+        is_default = $7, 
+        client_id = $8, 
+        updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $9 RETURNING *`,
       [
         assess_type,
         assess_full_name,
@@ -236,7 +250,8 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
         assess_type_description,
         is_active,
         is_default,
-        id,
+        targetClientId, // <--- New value for $8
+        id, // <--- Moved to $9
       ],
     );
     res.json(result.rows[0]);
@@ -1096,32 +1111,37 @@ app.get("/api/column-mappings/:clientId/names", async (req, res, next) => {
 });
 
 app.post("/api/column-mappings", async (req, res, next) => {
-  const { client_id, mapping_name, mappings, created_by } = req.body; // CHANGED from client_code
+  const { client_id, mapping_name, mappings, created_by } = req.body;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Ensure we delete old ones if they exist
     await client.query(
       "DELETE FROM column_mappings WHERE client_id = $1 AND mapping_name = $2",
       [client_id, mapping_name],
     );
 
-    for (const mapping of mappings) {
-      await client.query(
-        `INSERT INTO column_mappings (client_id, mapping_name, excel_column, target_field, is_custom_field, created_by) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          client_id,
-          mapping_name,
-          mapping.excel_column,
-          mapping.target_field,
-          mapping.is_custom_field || false,
-          created_by || "admin",
-        ],
-      );
+    // Only attempt insert if there are actually mappings
+    if (mappings && mappings.length > 0) {
+      for (const mapping of mappings) {
+        await client.query(
+          `INSERT INTO column_mappings (client_id, mapping_name, excel_column, target_field, is_custom_field, created_by) VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            client_id,
+            mapping_name,
+            mapping.excel_column,
+            mapping.target_field,
+            mapping.is_custom_field || false,
+            created_by || "admin",
+          ],
+        );
+      }
     }
     await client.query("COMMIT");
-    res.json({
+    // Explicitly return a JSON object so the frontend .then() triggers
+    res.status(200).json({
       message: "Mappings saved successfully",
-      count: mappings.length,
+      count: mappings ? mappings.length : 0,
     });
   } catch (transactionErr) {
     await client.query("ROLLBACK");
