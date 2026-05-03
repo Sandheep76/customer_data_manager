@@ -669,7 +669,7 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>🏛️ Admin Control Hub v1.1</h1>
+        <h1>🏛️ Admin Control Hub v1.0</h1>
         <div class="subtitle">
           Centralized Management for Clients, Assessment Types & Projects
         </div>
@@ -1069,7 +1069,6 @@
           <div class="top-controls-buttons">
             <!-- Renamed and width locked to match the Upload Data button -->
             <button
-              id="newMappingBtn"
               onclick="toggleInlineNewMapping()"
               class="btn-success"
               style="width: 175px"
@@ -2600,7 +2599,7 @@
         document.getElementById("mappingsModal").style.display = "block";
         loadMappingClientDropdownModal();
         // Ensures the button starts as disabled if no client is pre-selected
-        document.getElementById("newMappingBtn").disabled =
+        document.querySelector(".top-controls-buttons button").disabled =
           !currentMappingClientId;
       }
 
@@ -2636,7 +2635,8 @@
           select.onchange = function () {
             const clientId = select.value;
             // Toggles the "New Mapping" button based on client selection
-            document.getElementById("newMappingBtn").disabled = !clientId;
+            document.querySelector(".top-controls-buttons button").disabled =
+              !clientId;
             if (clientId) {
               currentMappingClientId = clientId;
               currentMappingName = null;
@@ -3166,58 +3166,44 @@
           return;
         }
 
-        if (!currentMappingClientId) {
-          showToast("Please select a client first", "error");
+        // Check for duplicates in the current list
+        const existingResponse = await fetch(
+          `/api/column-mappings/${currentMappingClientId}/names`,
+        );
+        const existingMappings = await existingResponse.json();
+        if (existingMappings.some((m) => m.mapping_name === mappingName)) {
+          showToast(`Mapping "${mappingName}" already exists`, "error");
           return;
         }
 
-        try {
-          // Check for duplicates in the current list
-          const existingResponse = await fetch(
-            `/api/column-mappings/${currentMappingClientId}/names`,
-          );
-          if (!existingResponse.ok) {
-            showToast("Error checking existing mappings", "error");
-            return;
-          }
-          const existingMappings = await existingResponse.json();
-          if (existingMappings.some((m) => m.mapping_name === mappingName)) {
-            showToast(`Mapping "${mappingName}" already exists`, "error");
-            return;
-          }
+        const createResponse = await fetch("/api/column-mappings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: parseInt(currentMappingClientId),
+            mapping_name: mappingName,
+            mappings: [], // Neon needs this empty array to satisfy the request
+            created_by: "admin",
+          }),
+        });
 
-          const createResponse = await fetch("/api/column-mappings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              client_id: parseInt(currentMappingClientId),
-              mapping_name: mappingName,
-              mappings: [], // Neon needs this empty array to satisfy the request
-              created_by: "admin",
-            }),
-          });
+        if (createResponse.ok) {
+          showToast(`Mapping template "${mappingName}" created.`, "success");
 
-          if (createResponse.ok) {
-            showToast(`Mapping template "${mappingName}" created.`, "success");
+          // 1. Explicitly hide the "Create Template" window
+          document.getElementById("inlineNewMappingSection").style.display =
+            "none";
+          document.getElementById("newMappingNameInline").value = "";
 
-            // 1. Explicitly hide the "Create Template" window
-            document.getElementById("inlineNewMappingSection").style.display =
-              "none";
-            document.getElementById("newMappingNameInline").value = "";
+          // 2. Set the global mapping name to the one just created
+          currentMappingName = mappingName;
 
-            // 2. Set the global mapping name to the one just created
-            currentMappingName = mappingName;
-
-            // 3. Re-run the badge loader and selection logic
-            await loadMappingNamesModal();
-            selectMappingModal(mappingName);
-          } else {
-            const error = await createResponse.json();
-            showToast(error.error || "Error creating mapping", "error");
-          }
-        } catch (err) {
-          console.error("createNewMappingInline error:", err);
-          showToast("Failed to create mapping: " + err.message, "error");
+          // 3. Re-run the badge loader and selection logic
+          await loadMappingNamesModal();
+          selectMappingModal(mappingName);
+        } else {
+          const error = await createResponse.json();
+          showToast(error.error || "Error creating mapping", "error");
         }
       }
       async function renameCurrentMappingInModal() {
@@ -4078,59 +4064,57 @@
         );
       }
 
+      // File upload listener for modal
+      document
+        .getElementById("loadExcelBtnModal")
+        ?.addEventListener("click", () =>
+          document.getElementById("mappingExcelFileModal").click(),
+        );
+
+      document
+        .getElementById("mappingExcelFileModal")
+        ?.addEventListener("change", async function (e) {
+          const file = e.target.files[0];
+          if (!file) return;
+          const formData = new FormData();
+          formData.append("excel", file);
+          const statusDiv = document.getElementById("columnsStatusModal");
+
+          showToast("📤 Loading columns...", "info");
+
+          try {
+            const response = await fetch("/api/get-excel-columns", {
+              method: "POST",
+              body: formData,
+            });
+            const result = await response.json();
+            if (response.ok) {
+              currentExcelColumns = result.columns;
+              currentSampleData = result.sampleData || {};
+              statusDiv.innerHTML = `<p class="status-success">✅ Loaded ${result.columns.length} columns from "${escapeHtml(file.name)}" (${result.rowCount} rows)</p>`;
+
+              document.getElementById("exportTemplateBtnModal").style.display =
+                "none";
+              renderMappingTableWithExistingModal();
+              document.getElementById(
+                "mappingTableContainerModal",
+              ).style.display = "block";
+            } else {
+              showToast(`Error: ${escapeHtml(result.error)}`, "error");
+              statusDiv.innerHTML = "";
+            }
+          } catch (err) {
+            showToast(`Failed: ${escapeHtml(err.message)}`, "error");
+            statusDiv.innerHTML = "";
+          }
+          e.target.value = "";
+        });
+
       document.addEventListener("DOMContentLoaded", () => {
         loadClientsList(false);
         loadClientDropdown();
         loadAssessTypeClientDropdown();
         loadMappingDefinitionsModal();
-
-        // File upload listener for modal — must be inside DOMContentLoaded
-        // so the elements are guaranteed to exist
-        document
-          .getElementById("loadExcelBtnModal")
-          ?.addEventListener("click", () =>
-            document.getElementById("mappingExcelFileModal").click(),
-          );
-
-        document
-          .getElementById("mappingExcelFileModal")
-          ?.addEventListener("change", async function (e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const formData = new FormData();
-            formData.append("excel", file);
-            const statusDiv = document.getElementById("columnsStatusModal");
-
-            showToast("📤 Loading columns...", "info");
-
-            try {
-              const response = await fetch("/api/get-excel-columns", {
-                method: "POST",
-                body: formData,
-              });
-              const result = await response.json();
-              if (response.ok) {
-                currentExcelColumns = result.columns;
-                currentSampleData = result.sampleData || {};
-                statusDiv.innerHTML = `<p class="status-success">✅ Loaded ${result.columns.length} columns from "${escapeHtml(file.name)}" (${result.rowCount} rows)</p>`;
-
-                document.getElementById(
-                  "exportTemplateBtnModal",
-                ).style.display = "none";
-                renderMappingTableWithExistingModal();
-                document.getElementById(
-                  "mappingTableContainerModal",
-                ).style.display = "block";
-              } else {
-                showToast(`Error: ${escapeHtml(result.error)}`, "error");
-                statusDiv.innerHTML = "";
-              }
-            } catch (err) {
-              showToast(`Failed: ${escapeHtml(err.message)}`, "error");
-              statusDiv.innerHTML = "";
-            }
-            e.target.value = "";
-          });
       });
 
       window.selectMapping = selectMappingModal;
