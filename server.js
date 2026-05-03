@@ -17,13 +17,17 @@ app.use(express.json());
 app.use(express.static("public"));
 
 // ================= DB CONNECTION =================
+const isProduction = process.env.RENDER === "true" || !!process.env.RENDER;
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false, // Required by Neon for secure cloud connections
-  },
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 
+// Add this line right below to help us troubleshoot
+console.log(
+  `Database SSL mode: ${isProduction ? "ON (Cloud)" : "OFF (Local)"}`,
+);
 // Prevent unexpected DB idle client errors from crashing the app
 pool.on("error", (err, client) => {
   console.error("Unexpected error on idle database client:", err);
