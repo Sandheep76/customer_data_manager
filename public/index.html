@@ -6,7 +6,7 @@
     <title>Admin Control Hub</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-      /* --- ENHANCED MAPPING UI STYLES. Testing to see if git remember the change--- */
+      /* --- ENHANCED MAPPING UI STYLES --- */
       /* --- ALIGNMENT & SIZING REFINEMENTS --- */
       .top-controls-flex {
         display: flex;
@@ -2598,6 +2598,9 @@
         }
         document.getElementById("mappingsModal").style.display = "block";
         loadMappingClientDropdownModal();
+        // Ensures the button starts as disabled if no client is pre-selected
+        document.querySelector(".top-controls-buttons button").disabled =
+          !currentMappingClientId;
       }
 
       function closeMappingsModal() {
@@ -2631,6 +2634,9 @@
 
           select.onchange = function () {
             const clientId = select.value;
+            // Toggles the "New Mapping" button based on client selection
+            document.querySelector(".top-controls-buttons button").disabled =
+              !clientId;
             if (clientId) {
               currentMappingClientId = clientId;
               currentMappingName = null;
@@ -2657,8 +2663,7 @@
           const exportBtn = document.getElementById("exportTemplateBtnModal");
 
           if (mappings.length === 0) {
-            container.innerHTML =
-              '<div style="color: #666; font-size:12px;">No mapping templates created yet. Click "New Mapping" to begin.</div>';
+            container.innerHTML = "";
             selectorDiv.style.display = "flex";
             if (deleteBtn) deleteBtn.style.display = "none";
             if (renameBtn) renameBtn.style.display = "none";
@@ -3239,13 +3244,12 @@
           newName.trim() === "" ||
           newName.trim() === currentMappingName
         ) {
-          return; // Action was cancelled or name wasn't changed
+          return;
         }
 
         const cleanNewName = newName.trim();
 
         try {
-          // 1. Check if the new name already exists to prevent overwriting
           const existingResponse = await fetch(
             `/api/column-mappings/${currentMappingClientId}/names`,
           );
@@ -3265,20 +3269,20 @@
 
           showToast("Renaming...", "info");
 
-          // 2. Clone the existing mappings under the new name
+          // 1. Save whatever is currently in memory (even if empty) to the new name
           const createResponse = await fetch("/api/column-mappings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               client_id: parseInt(currentMappingClientId),
               mapping_name: cleanNewName,
-              mappings: currentMappingsList, // Carry over all existing data rules
+              mappings: currentMappingsList || [],
               created_by: "admin",
             }),
           });
 
           if (createResponse.ok) {
-            // 3. Delete the old mapping
+            // 2. Delete the old name
             await fetch(
               `/api/column-mappings/${currentMappingClientId}/${currentMappingName}`,
               { method: "DELETE" },
@@ -3286,12 +3290,12 @@
 
             showToast(`Renamed to "${cleanNewName}"`, "success");
 
-            // 4. Update UI states seamlessly
+            // 3. Update the global name BEFORE refreshing the UI
             currentMappingName = cleanNewName;
-            await loadMappingNamesModal();
-            selectMappingModal(cleanNewName); // Force the UI to active the newly renamed tab
 
-            // Update the main projects dropdown in the background
+            // 4. Force a full UI refresh
+            await loadMappingNamesModal();
+            selectMappingModal(cleanNewName); // This ensures the new badge is selected/active
             loadProjectMappingTemplates();
           } else {
             const error = await createResponse.json();
