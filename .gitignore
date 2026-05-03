@@ -1,0 +1,15 @@
+# Environment variables (NEVER commit this)
+.env
+
+# Node modules
+node_modules/
+
+# Uploaded files
+uploads/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

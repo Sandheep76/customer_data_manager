@@ -1,0 +1,20 @@
+The Smart Match Hierarchy Blueprint
+Level 1: Local Client Memory (Highest Priority)
+Action: When Smart Match is clicked, first scan all other saved mapping templates belonging to this specific client.
+Conflict Resolution: If the column "Site Location" is mapped to City in one template but Address in another, we evaluate two things:
+Is one of these a "Default" template? If yes, it gets priority.
+If both are equal, we run a "Matching Percentage" algorithm (fuzzy string matching) to see which mapping mathematically makes the most sense.
+
+Level 2: Global System Memory
+Action: If the client's own templates don't have an answer, expand the search to query mapping templates across all other clients in the database.
+Conflict Resolution: Apply the exact same logic—if multiple global templates disagree, use the "Matching Percentage" algorithm to pick the most historically accurate match.
+
+Level 3: Algorithmic Fallback (The Upgraded Dictionary)
+Action: If no historical template has ever seen this column before, fall back to our internal dictionary.
+The "CustCity" Fix: As you correctly pointed out, the current logic is flawed because it just grabs the first partial match. "CustCity" grabbed "Job City" simply because the word "City" matched. We will replace this with a true similarity score (like Levenshtein distance) so "CustCity" mathematically scores a 90% match with "Customer City" and only a 40% match with "Job City".
+
+Level 4: Required Field Safety Net (Brute Force with Guardrails)
+Action: Make a final, aggressive pass to find the required customer_name field.
+The Guardrail: Implement strict type-checking. Even if the algorithm is desperate to find the Customer Name, it will explicitly reject columns that contain address keywords (Street, Ave, Blvd) or date formats, ensuring we never forcefully map bad data just to satisfy a requirement.
+
+This is a fantastic roadmap. It will make the system smarter every single time an admin saves a template. Let me know whenever you are ready to tackle this in the future!
