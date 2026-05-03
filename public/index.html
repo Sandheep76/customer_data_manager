@@ -669,7 +669,7 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>🏛️ Admin Control Hub - HangFix Check - v2.0</h1>
+        <h1>🏛️ Admin Control Hub - HangFix Check - v2.1</h1>
         <div class="subtitle">
           Centralized Management for Clients, Assessment Types & Projects
         </div>
@@ -2634,6 +2634,7 @@
 
           select.onchange = function () {
             const clientId = select.value;
+            document.getElementById("newMappingBtn").disabled = !clientId;
             if (clientId) {
               currentMappingClientId = clientId;
               currentMappingName = null;
