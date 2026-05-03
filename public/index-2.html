@@ -669,7 +669,7 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>🏛️ Admin Control Hub v1.2</h1>
+        <h1>🏛️ Admin Control Hub v1.1</h1>
         <div class="subtitle">
           Centralized Management for Clients, Assessment Types & Projects
         </div>
@@ -3172,22 +3172,16 @@
         }
 
         try {
-          // Check for duplicates — treat non-OK (e.g. 404 = no mappings yet) as empty list
-          let existingMappings = [];
-          try {
-            const existingResponse = await fetch(
-              `/api/column-mappings/${currentMappingClientId}/names`,
-            );
-            if (existingResponse.ok) {
-              existingMappings = await existingResponse.json();
-            }
-          } catch (_) {
-            // Network error on duplicate check — safe to proceed, POST will validate server-side
+          // Check for duplicates in the current list
+          const existingResponse = await fetch(
+            `/api/column-mappings/${currentMappingClientId}/names`,
+          );
+          if (!existingResponse.ok) {
+            showToast("Error checking existing mappings", "error");
+            return;
           }
-          if (
-            Array.isArray(existingMappings) &&
-            existingMappings.some((m) => m.mapping_name === mappingName)
-          ) {
+          const existingMappings = await existingResponse.json();
+          if (existingMappings.some((m) => m.mapping_name === mappingName)) {
             showToast(`Mapping "${mappingName}" already exists`, "error");
             return;
           }
