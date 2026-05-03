@@ -282,8 +282,10 @@ class ExcelImporter {
       stakeholders: [],
     };
 
+    // 1. CRITICAL FIX: Check out a dedicated connection for all transactions
+    const dbClient = await this.pool.connect();
+
     try {
-      // UPDATED: Removed the lookup for client_code completely
       const clientDefaults = await this.getClientDefaults(clientId);
       const validAssessTypes = await this.getValidAssessTypes(clientId);
       const mappingData = await this.loadMappingsFromDB(
@@ -308,7 +310,8 @@ class ExcelImporter {
         const row = rows[i];
 
         try {
-          await this.pool.query("BEGIN");
+          // 2. CRITICAL FIX: Use the dedicated client, not the random pool
+          await dbClient.query("BEGIN");
 
           let assessTypeToUse = selectedAssessTypeFromDropdown;
           if (
@@ -331,7 +334,6 @@ class ExcelImporter {
             );
           }
 
-          // Declare all variables for project fields
           let projectName = null;
           let projectIdentifier = null;
           let projectType = null;
@@ -346,7 +348,6 @@ class ExcelImporter {
           let jobCity = null;
           let jobState = null;
 
-          // Apply project field mappings
           for (const [colName, value] of Object.entries(row)) {
             if (value === undefined || value === null || value === "NA")
               continue;
@@ -448,8 +449,8 @@ class ExcelImporter {
           const extraInfo = row["Extra Info"] || row["Notes"] || null;
           const uploadDate = new Date().toISOString().split("T")[0];
 
-          // Complete INSERT statement with all fields
-          const projectResult = await this.pool.query(
+          // 3. CRITICAL FIX: Use dbClient.query here
+          const projectResult = await dbClient.query(
             `INSERT INTO projects (
               client_id, project_name, project_id, customer_name, project_type, 
               address, city, state, cust_country, job_country, 
@@ -492,7 +493,8 @@ class ExcelImporter {
           );
           for (const contact of contacts) {
             contact.client_id = clientId;
-            const contactResult = await this.pool.query(
+            // 4. CRITICAL FIX: Use dbClient.query here
+            const contactResult = await dbClient.query(
               `INSERT INTO contacts (client_id, project_id, contact_name, role, phone, email, is_primary, custom_fields) 
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
               [
@@ -516,7 +518,8 @@ class ExcelImporter {
           );
           for (const stakeholder of stakeholders) {
             stakeholder.client_id = clientId;
-            const stakeholderResult = await this.pool.query(
+            // 5. CRITICAL FIX: Use dbClient.query here
+            const stakeholderResult = await dbClient.query(
               `INSERT INTO stakeholders (client_id, project_id, stakeholder_name, stakeholder_type, company_name, role_on_project, custom_fields) 
                VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
               [
@@ -532,14 +535,16 @@ class ExcelImporter {
             results.stakeholders.push(stakeholderResult.rows[0].id);
           }
 
-          await this.pool.query("COMMIT");
+          // 6. CRITICAL FIX: Use dbClient.query here
+          await dbClient.query("COMMIT");
           results.success++;
 
           console.log(
             `✅ Row ${i + 1}: "${projectName}" - ${contacts.length} contacts, ${stakeholders.length} stakeholders`,
           );
         } catch (rowError) {
-          await this.pool.query("ROLLBACK");
+          // 7. CRITICAL FIX: Use dbClient.query here
+          await dbClient.query("ROLLBACK");
           results.failed++;
           results.errors.push({ row: i + 1, error: rowError.message });
           console.error(`❌ Row ${i + 1} failed:`, rowError.message);
@@ -552,6 +557,9 @@ class ExcelImporter {
       return results;
     } catch (err) {
       throw err;
+    } finally {
+      // 8. CRITICAL FIX: ALWAYS release the connection back to the pool!
+      dbClient.release();
     }
   }
 }

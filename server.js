@@ -6,7 +6,7 @@ const XLSX = require("xlsx");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
-const fsPromises = fs.promises;
+const fsPromises = require("fs").promises;
 const ExcelImporter = require("./excelImporter");
 
 const app = express();
@@ -23,6 +23,12 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 5432,
+});
+
+// Prevent unexpected DB idle client errors from crashing the app
+pool.on("error", (err, client) => {
+  console.error("Unexpected error on idle database client:", err);
+  // The app will log the error but keep running!
 });
 
 pool.connect((err, client, release) => {
@@ -74,6 +80,11 @@ const uploadLogo = multer({
     cb(new Error("Only image files are allowed"));
   },
 });
+
+// Utility to clean up string inputs
+function sanitize(value) {
+  return typeof value === "string" ? value.trim() : value;
+}
 
 // ================= UTILS =================
 function validateRequired(fields, res) {
@@ -198,6 +209,12 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
       "SELECT client_id FROM assess_types WHERE id = $1",
       [id],
     );
+
+    // ADD THIS 404 CHECK HERE
+    if (clientResult.rows.length === 0) {
+      return res.status(404).json({ error: "Assess type not found" });
+    }
+
     const client_id = clientResult.rows[0]?.client_id; // CHANGED from client_code
 
     if (is_default && client_id) {
@@ -447,6 +464,9 @@ app.get("/api/clients/:id", async (req, res, next) => {
     const result = await pool.query("SELECT * FROM clients WHERE id = $1", [
       req.params.id,
     ]);
+    // ADD THIS
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: "Client not found" });
     res.json(result.rows[0]);
   } catch (err) {
     next(err);
@@ -454,12 +474,15 @@ app.get("/api/clients/:id", async (req, res, next) => {
 });
 
 app.post("/api/clients", async (req, res, next) => {
+  // 1. Grab and sanitize the critical text inputs immediately
+  const client_name = sanitize(req.body.client_name);
+  const client_abbreviation = sanitize(req.body.client_abbreviation);
+  const industry = sanitize(req.body.industry);
+  const contact_person = sanitize(req.body.contact_person);
+
+  // Grab the rest normally
   const {
-    client_name,
-    client_abbreviation,
     client_logo,
-    industry,
-    contact_person,
     contact_email,
     contact_phone,
     is_active,
@@ -467,13 +490,12 @@ app.post("/api/clients", async (req, res, next) => {
     default_job_country,
   } = req.body;
 
-  if (!validateRequired({ client_name }, res)) return; // Removed client_code
+  if (!validateRequired({ client_name }, res)) return;
 
   try {
-    // CHANGED: Duplicate check now looks at client_name since code is gone
     const exists = await pool.query(
       "SELECT id FROM clients WHERE client_name = $1",
-      [client_name],
+      [client_name], // It is now using the sanitized version!
     );
     if (exists.rows.length)
       return res
@@ -504,12 +526,16 @@ app.post("/api/clients", async (req, res, next) => {
 app.put("/api/clients/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // ADD SANITIZATION HERE
+    const client_name = sanitize(req.body.client_name);
+    const client_abbreviation = sanitize(req.body.client_abbreviation);
+    const industry = sanitize(req.body.industry);
+    const contact_person = sanitize(req.body.contact_person);
+
+    // Grab the rest normally
     const {
-      client_name,
-      client_abbreviation,
       client_logo,
-      industry,
-      contact_person,
       contact_email,
       contact_phone,
       is_active,
@@ -663,6 +689,9 @@ app.get("/api/projects/:projectId", async (req, res, next) => {
       "SELECT * FROM projects WHERE id = $1",
       [projectId],
     );
+    // ADD THIS
+    if (projectResult.rows.length === 0)
+      return res.status(404).json({ error: "Project not found" });
     const contactsResult = await pool.query(
       "SELECT * FROM contacts WHERE project_id = $1",
       [projectId],
@@ -1284,10 +1313,13 @@ app.post("/api/projects/:projectId/status", async (req, res, next) => {
   }
 });
 
-// ================= ERROR HANDLER =================
+// Global Error Handler - MUST be the last middleware
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: err.message || "Internal Server Error" });
+  console.error("🔥 GLOBAL ERROR:", err.stack || err.message);
+
+  res.status(err.status || 500).json({
+    error: err.message || "Internal Server Error",
+  });
 });
 
 // ================= START SERVER =================
