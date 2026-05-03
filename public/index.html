@@ -669,7 +669,7 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>🏛️ Admin Control Hub</h1>
+        <h1>🏛️ Admin Control Hub v1.0</h1>
         <div class="subtitle">
           Centralized Management for Clients, Assessment Types & Projects
         </div>
@@ -3166,6 +3166,7 @@
           return;
         }
 
+        // Check for duplicates in the current list
         const existingResponse = await fetch(
           `/api/column-mappings/${currentMappingClientId}/names`,
         );
@@ -3181,54 +3182,30 @@
           body: JSON.stringify({
             client_id: parseInt(currentMappingClientId),
             mapping_name: mappingName,
-            mappings: [],
+            mappings: [], // Neon needs this empty array to satisfy the request
             created_by: "admin",
           }),
         });
 
-        if (!createResponse.ok) {
+        if (createResponse.ok) {
+          showToast(`Mapping template "${mappingName}" created.`, "success");
+
+          // 1. Explicitly hide the "Create Template" window
+          document.getElementById("inlineNewMappingSection").style.display =
+            "none";
+          document.getElementById("newMappingNameInline").value = "";
+
+          // 2. Set the global mapping name to the one just created
+          currentMappingName = mappingName;
+
+          // 3. Re-run the badge loader and selection logic
+          await loadMappingNamesModal();
+          selectMappingModal(mappingName);
+        } else {
           const error = await createResponse.json();
           showToast(error.error || "Error creating mapping", "error");
-          return;
         }
-
-        showToast(
-          `Mapping template "${mappingName}" created. Upload an Excel file to begin mapping.`,
-          "info",
-        );
-        toggleInlineNewMapping();
-
-        currentExcelColumns = [];
-        currentMappingsList = [];
-        currentMappingName = mappingName;
-
-        document.getElementById("mappingExcelFileModal").value = "";
-        document.getElementById("uploadColumnsAreaModal").style.display =
-          "block";
-        document.getElementById("mappingTableContainerModal").style.display =
-          "none";
-        document.getElementById("noMappingSelectedModal").style.display =
-          "none";
-        document.getElementById("deleteMappingBtnModal").style.display =
-          "inline-block";
-        document.getElementById("columnsStatusModal").innerHTML =
-          '<p class="status-info">📋 New template created. Upload an Excel file to define column mappings.</p>';
-        clearStatusMessage("columnsStatusModal");
-
-        await loadMappingNamesModal();
-
-        document
-          .querySelectorAll("#mappingBadgesModal .mapping-badge")
-          .forEach((b) => {
-            b.classList.remove("active");
-          });
-
-        const container = document.getElementById("mappingBadgesModal");
-        container.innerHTML += `<span class="mapping-badge active unsaved" onclick="selectMappingModal('${escapeHtml(mappingName)}')">${escapeHtml(mappingName)}</span>`;
-        document.getElementById("mappingSelectorModal").style.display = "flex";
-        selectMappingModal(mappingName);
       }
-
       async function renameCurrentMappingInModal() {
         if (!currentMappingName) {
           showToast("No mapping selected", "error");
