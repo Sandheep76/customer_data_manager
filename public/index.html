@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Control Hub</title>
+    <title>Admin Control Hub v1.6</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
       /* --- ENHANCED MAPPING UI STYLES --- */
@@ -669,7 +669,7 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>🏛️ Admin Control Hub v1.5</h1>
+        <h1>🏛️ Admin Control Hub</h1>
         <div class="subtitle">
           Centralized Management for Clients, Assessment Types & Projects
         </div>
@@ -1069,6 +1069,7 @@
           <div class="top-controls-buttons">
             <!-- Renamed and width locked to match the Upload Data button -->
             <button
+              id="newMappingBtn"
               onclick="toggleInlineNewMapping()"
               class="btn-success"
               style="width: 175px"
@@ -2657,7 +2658,8 @@
           const exportBtn = document.getElementById("exportTemplateBtnModal");
 
           if (mappings.length === 0) {
-            container.innerHTML = "";
+            container.innerHTML =
+              '<div style="color: #666; font-size:12px;">No mapping templates created yet. Click "New Mapping" to begin.</div>';
             selectorDiv.style.display = "flex";
             if (deleteBtn) deleteBtn.style.display = "none";
             if (renameBtn) renameBtn.style.display = "none";
@@ -3160,39 +3162,6 @@
           return;
         }
 
-        // --- START OF DUPLICATE CHECK SAFETY ---
-        try {
-          let existingMappings = [];
-          try {
-            const existingResponse = await fetch(
-              `/api/column-mappings/${currentMappingClientId}/names`,
-            );
-            if (existingResponse.ok) {
-              existingMappings = await existingResponse.json();
-            }
-          } catch (_) {
-            /* Safe to proceed if fetch fails */
-          }
-
-          if (
-            Array.isArray(existingMappings) &&
-            existingMappings.some((m) => m.mapping_name === mappingName)
-          ) {
-            showToast(`Mapping "${mappingName}" already exists`, "error");
-            return;
-          }
-          // --- END OF DUPLICATE CHECK SAFETY ---
-
-          // Your existing createResponse fetch starts here...
-          const createResponse = await fetch("/api/column-mappings", {
-            /* ... body details ... */
-          });
-
-          // ... include the 'hang fix' lines here as discussed ...
-        } catch (err) {
-          /* ... */
-        }
-
         const existingResponse = await fetch(
           `/api/column-mappings/${currentMappingClientId}/names`,
         );
@@ -3213,23 +3182,10 @@
           }),
         });
 
-        // ... inside createNewMappingInline ...
-        if (createResponse.ok) {
-          showToast(`Mapping template "${mappingName}" created.`, "success");
-
-          // FIX: This explicitly hides the input window so it doesn't "hang"
-          document.getElementById("inlineNewMappingSection").style.display =
-            "none";
-
-          // FIX: Resets the input field for the next use
-          document.getElementById("newMappingNameInline").value = "";
-
-          // FIX: Updates the global state so the UI knows which tab to highlight
-          currentMappingName = mappingName;
-
-          // Refresh UI components
-          await loadMappingNamesModal();
-          selectMappingModal(mappingName);
+        if (!createResponse.ok) {
+          const error = await createResponse.json();
+          showToast(error.error || "Error creating mapping", "error");
+          return;
         }
 
         showToast(
