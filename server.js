@@ -24,14 +24,10 @@ const pool = new Pool({
   ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 
-// Add this line right below to help us troubleshoot
-console.log(
-  `Database SSL mode: ${isProduction ? "ON (Cloud)" : "OFF (Local)"}`,
-);
-// Prevent unexpected DB idle client errors from crashing the app
+console.log(`Database SSL mode: ${isProduction ? "ON (Cloud)" : "OFF (Local)"}`);
+
 pool.on("error", (err, client) => {
   console.error("Unexpected error on idle database client:", err);
-  // The app will log the error but keep running!
 });
 
 pool.connect((err, client, release) => {
@@ -134,7 +130,6 @@ app.get("/api/assess-types/by-id/:id", async (req, res, next) => {
   }
 });
 
-// CHANGED: Route now expects clientId instead of clientCode
 app.get("/api/assess-types/client/:clientId", async (req, res, next) => {
   try {
     const { clientId } = req.params;
@@ -151,7 +146,7 @@ app.get("/api/assess-types/client/:clientId", async (req, res, next) => {
 
 app.post("/api/assess-types", async (req, res, next) => {
   const {
-    client_id, // CHANGED from client_code
+    client_id,
     assess_type,
     assess_full_name,
     name_on_report,
@@ -199,7 +194,7 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
-      client_id, // <--- Add this to the destructuring
+      client_id,
       assess_type,
       assess_full_name,
       name_on_report,
@@ -209,7 +204,6 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
       is_default,
     } = req.body;
 
-    // Use the client_id from the request body if provided, otherwise fallback to DB
     let targetClientId = client_id;
     if (!targetClientId) {
       const clientResult = await pool.query(
@@ -229,7 +223,6 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
       );
     }
 
-    // UPDATED QUERY: Added client_id = $8
     const result = await pool.query(
       `UPDATE assess_types SET 
         assess_type = $1, 
@@ -250,8 +243,8 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
         assess_type_description,
         is_active,
         is_default,
-        targetClientId, // <--- New value for $8
-        id, // <--- Moved to $9
+        targetClientId,
+        id,
       ],
     );
     res.json(result.rows[0]);
@@ -330,7 +323,6 @@ app.get("/api/assess-types/all/export", async (req, res, next) => {
   }
 });
 
-// CHANGED: Route now expects clientId instead of clientCode
 app.get("/api/assess-types/export/client/:clientId", async (req, res, next) => {
   try {
     const { clientId } = req.params;
@@ -414,7 +406,6 @@ app.get("/api/clients", async (req, res, next) => {
 app.get("/api/clients/export", async (req, res, next) => {
   try {
     const { format, showAll } = req.query;
-    // CHANGED: Removed client_code
     let query =
       "SELECT id, client_name, client_abbreviation, industry, contact_person, contact_email, contact_phone, is_active, default_cust_country, default_job_country, created_at FROM clients ORDER BY client_name";
     if (showAll !== "true")
@@ -482,7 +473,6 @@ app.get("/api/clients/:id", async (req, res, next) => {
     const result = await pool.query("SELECT * FROM clients WHERE id = $1", [
       req.params.id,
     ]);
-    // ADD THIS
     if (result.rows.length === 0)
       return res.status(404).json({ error: "Client not found" });
     res.json(result.rows[0]);
@@ -492,13 +482,11 @@ app.get("/api/clients/:id", async (req, res, next) => {
 });
 
 app.post("/api/clients", async (req, res, next) => {
-  // 1. Grab and sanitize the critical text inputs immediately
   const client_name = sanitize(req.body.client_name);
   const client_abbreviation = sanitize(req.body.client_abbreviation);
   const industry = sanitize(req.body.industry);
   const contact_person = sanitize(req.body.contact_person);
 
-  // Grab the rest normally
   const {
     client_logo,
     contact_email,
@@ -513,7 +501,7 @@ app.post("/api/clients", async (req, res, next) => {
   try {
     const exists = await pool.query(
       "SELECT id FROM clients WHERE client_name = $1",
-      [client_name], // It is now using the sanitized version!
+      [client_name],
     );
     if (exists.rows.length)
       return res
@@ -544,14 +532,11 @@ app.post("/api/clients", async (req, res, next) => {
 app.put("/api/clients/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-
-    // ADD SANITIZATION HERE
     const client_name = sanitize(req.body.client_name);
     const client_abbreviation = sanitize(req.body.client_abbreviation);
     const industry = sanitize(req.body.industry);
     const contact_person = sanitize(req.body.contact_person);
 
-    // Grab the rest normally
     const {
       client_logo,
       contact_email,
@@ -570,7 +555,6 @@ app.put("/api/clients/:id", async (req, res, next) => {
       logoToSave = existing.rows[0]?.client_logo;
     }
 
-    // CHANGED: Removed client_code from update
     const result = await pool.query(
       `UPDATE clients SET client_name = $1, client_abbreviation = $2, client_logo = $3, industry = $4, contact_person = $5, contact_email = $6, contact_phone = $7, is_active = $8, default_cust_country = $9, default_job_country = $10, updated_at = CURRENT_TIMESTAMP WHERE id = $11 RETURNING *`,
       [
@@ -707,7 +691,6 @@ app.get("/api/projects/:projectId", async (req, res, next) => {
       "SELECT * FROM projects WHERE id = $1",
       [projectId],
     );
-    // ADD THIS
     if (projectResult.rows.length === 0)
       return res.status(404).json({ error: "Project not found" });
     const contactsResult = await pool.query(
@@ -980,7 +963,6 @@ app.post(
       console.log(
         `📄 Starting import for client ${clientId} from file: ${req.file.originalname}`,
       );
-      console.log(`📋 Selected AssessType: ${assessType || "Not provided"}`);
       console.log(`📋 Selected Mapping: ${mappingName || "Not provided"}`);
 
       const importer = new ExcelImporter(pool);
@@ -1078,7 +1060,6 @@ app.get("/api/mapping-definitions", async (req, res, next) => {
   }
 });
 
-// CHANGED: Route now expects clientId instead of clientCode
 app.get("/api/column-mappings/:clientId", async (req, res, next) => {
   try {
     const { clientId } = req.params;
@@ -1097,7 +1078,6 @@ app.get("/api/column-mappings/:clientId", async (req, res, next) => {
   }
 });
 
-// CHANGED: Route now expects clientId instead of clientCode
 app.get("/api/column-mappings/:clientId/names", async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -1115,13 +1095,11 @@ app.post("/api/column-mappings", async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    // Ensure we delete old ones if they exist
     await client.query(
       "DELETE FROM column_mappings WHERE client_id = $1 AND mapping_name = $2",
       [client_id, mapping_name],
     );
 
-    // Only attempt insert if there are actually mappings
     if (mappings && mappings.length > 0) {
       for (const mapping of mappings) {
         await client.query(
@@ -1138,7 +1116,6 @@ app.post("/api/column-mappings", async (req, res, next) => {
       }
     }
     await client.query("COMMIT");
-    // Explicitly return a JSON object so the frontend .then() triggers
     res.status(200).json({
       message: "Mappings saved successfully",
       count: mappings ? mappings.length : 0,
@@ -1151,7 +1128,6 @@ app.post("/api/column-mappings", async (req, res, next) => {
   }
 });
 
-// CHANGED: Route now expects clientId instead of clientCode
 app.delete(
   "/api/column-mappings/:clientId/:mappingName",
   async (req, res, next) => {
@@ -1168,7 +1144,6 @@ app.delete(
   },
 );
 
-// CHANGED: Route now expects clientId instead of clientCode
 app.get("/api/column-mappings/:clientId/export", async (req, res, next) => {
   try {
     const { clientId } = req.params;
@@ -1339,7 +1314,6 @@ app.post("/api/projects/:projectId/status", async (req, res, next) => {
 // Global Error Handler - MUST be the last middleware
 app.use((err, req, res, next) => {
   console.error("🔥 GLOBAL ERROR:", err.stack || err.message);
-
   res.status(err.status || 500).json({
     error: err.message || "Internal Server Error",
   });
