@@ -669,7 +669,7 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>🏛️ Admin Control Hub - HangFix Check - v2.1</h1>
+        <h1>🏛️ Admin Control Hub v - HangFix</h1>
         <div class="subtitle">
           Centralized Management for Clients, Assessment Types & Projects
         </div>
@@ -2599,6 +2599,7 @@
         }
         document.getElementById("mappingsModal").style.display = "block";
         loadMappingClientDropdownModal();
+        // Ensures the button starts as disabled if no client is pre-selected
         document.getElementById("newMappingBtn").disabled =
           !currentMappingClientId;
       }
@@ -2634,6 +2635,7 @@
 
           select.onchange = function () {
             const clientId = select.value;
+            // Toggles the "New Mapping" button based on client selection
             document.getElementById("newMappingBtn").disabled = !clientId;
             if (clientId) {
               currentMappingClientId = clientId;
@@ -3164,69 +3166,66 @@
           return;
         }
 
-        const existingResponse = await fetch(
-          `/api/column-mappings/${currentMappingClientId}/names`,
-        );
-        const existingMappings = await existingResponse.json();
-        if (existingMappings.some((m) => m.mapping_name === mappingName)) {
-          showToast(`Mapping "${mappingName}" already exists`, "error");
+        if (!currentMappingClientId) {
+          showToast("Please select a client first", "error");
           return;
         }
 
-        const createResponse = await fetch("/api/column-mappings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            client_id: parseInt(currentMappingClientId),
-            mapping_name: mappingName,
-            mappings: [],
-            created_by: "admin",
-          }),
-        });
+        try {
+          // Check for duplicates — treat non-OK (e.g. 404 = no mappings yet) as empty list
+          let existingMappings = [];
+          try {
+            const existingResponse = await fetch(
+              `/api/column-mappings/${currentMappingClientId}/names`,
+            );
+            if (existingResponse.ok) {
+              existingMappings = await existingResponse.json();
+            }
+          } catch (_) {
+            // Network error on duplicate check — safe to proceed, POST will validate server-side
+          }
+          if (
+            Array.isArray(existingMappings) &&
+            existingMappings.some((m) => m.mapping_name === mappingName)
+          ) {
+            showToast(`Mapping "${mappingName}" already exists`, "error");
+            return;
+          }
 
-        if (!createResponse.ok) {
-          const error = await createResponse.json();
-          showToast(error.error || "Error creating mapping", "error");
-          return;
-        }
-
-        showToast(
-          `Mapping template "${mappingName}" created. Upload an Excel file to begin mapping.`,
-          "info",
-        );
-        toggleInlineNewMapping();
-
-        currentExcelColumns = [];
-        currentMappingsList = [];
-        currentMappingName = mappingName;
-
-        document.getElementById("mappingExcelFileModal").value = "";
-        document.getElementById("uploadColumnsAreaModal").style.display =
-          "block";
-        document.getElementById("mappingTableContainerModal").style.display =
-          "none";
-        document.getElementById("noMappingSelectedModal").style.display =
-          "none";
-        document.getElementById("deleteMappingBtnModal").style.display =
-          "inline-block";
-        document.getElementById("columnsStatusModal").innerHTML =
-          '<p class="status-info">📋 New template created. Upload an Excel file to define column mappings.</p>';
-        clearStatusMessage("columnsStatusModal");
-
-        await loadMappingNamesModal();
-
-        document
-          .querySelectorAll("#mappingBadgesModal .mapping-badge")
-          .forEach((b) => {
-            b.classList.remove("active");
+          const createResponse = await fetch("/api/column-mappings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: parseInt(currentMappingClientId),
+              mapping_name: mappingName,
+              mappings: [], // Neon needs this empty array to satisfy the request
+              created_by: "admin",
+            }),
           });
 
-        const container = document.getElementById("mappingBadgesModal");
-        container.innerHTML += `<span class="mapping-badge active unsaved" onclick="selectMappingModal('${escapeHtml(mappingName)}')">${escapeHtml(mappingName)}</span>`;
-        document.getElementById("mappingSelectorModal").style.display = "flex";
-        selectMappingModal(mappingName);
-      }
+          if (createResponse.ok) {
+            showToast(`Mapping template "${mappingName}" created.`, "success");
 
+            // 1. Explicitly hide the "Create Template" window
+            document.getElementById("inlineNewMappingSection").style.display =
+              "none";
+            document.getElementById("newMappingNameInline").value = "";
+
+            // 2. Set the global mapping name to the one just created
+            currentMappingName = mappingName;
+
+            // 3. Re-run the badge loader and selection logic
+            await loadMappingNamesModal();
+            selectMappingModal(mappingName);
+          } else {
+            const error = await createResponse.json();
+            showToast(error.error || "Error creating mapping", "error");
+          }
+        } catch (err) {
+          console.error("createNewMappingInline error:", err);
+          showToast("Failed to create mapping: " + err.message, "error");
+        }
+      }
       async function renameCurrentMappingInModal() {
         if (!currentMappingName) {
           showToast("No mapping selected", "error");
@@ -3242,13 +3241,12 @@
           newName.trim() === "" ||
           newName.trim() === currentMappingName
         ) {
-          return; // Action was cancelled or name wasn't changed
+          return;
         }
 
         const cleanNewName = newName.trim();
 
         try {
-          // 1. Check if the new name already exists to prevent overwriting
           const existingResponse = await fetch(
             `/api/column-mappings/${currentMappingClientId}/names`,
           );
@@ -3268,7 +3266,7 @@
 
           showToast("Renaming...", "info");
 
-          // 2. Clone the existing mappings under the new name
+          // 1. Save whatever is currently in memory (even if empty) to the new name
           const createResponse = await fetch("/api/column-mappings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -3281,7 +3279,7 @@
           });
 
           if (createResponse.ok) {
-            // 3. Delete the old mapping
+            // 2. Delete the old name
             await fetch(
               `/api/column-mappings/${currentMappingClientId}/${currentMappingName}`,
               { method: "DELETE" },
@@ -3289,12 +3287,12 @@
 
             showToast(`Renamed to "${cleanNewName}"`, "success");
 
-            // 4. Update UI states seamlessly
+            // 3. Update the global name BEFORE refreshing the UI
             currentMappingName = cleanNewName;
-            await loadMappingNamesModal();
-            selectMappingModal(cleanNewName); // Force the UI to active the newly renamed tab
 
-            // Update the main projects dropdown in the background
+            // 4. Force a full UI refresh
+            await loadMappingNamesModal();
+            selectMappingModal(cleanNewName); // This ensures the new badge is selected/active
             loadProjectMappingTemplates();
           } else {
             const error = await createResponse.json();
@@ -4085,6 +4083,7 @@
           "info",
         );
       }
+
       document.addEventListener("DOMContentLoaded", () => {
         loadClientsList(false);
         loadClientDropdown();
