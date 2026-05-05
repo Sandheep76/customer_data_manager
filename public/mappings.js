@@ -88,7 +88,7 @@ async function loadMappingNamesModal() {
     if (!container) return;
 
     if (mappings.length === 0) {
-      container.innerHTML = '<div style="color: #666; padding:10px;">No mapping templates. Click "New Mapping" to create one.</div>';
+      container.innerHTML = ""; // Empty - no duplicate message
       if (selectorDiv) selectorDiv.classList.remove("hidden");
       document.getElementById("uploadColumnsAreaModal").classList.add("hidden");
       document.getElementById("mappingTableContainerModal").classList.add("hidden");
@@ -235,7 +235,7 @@ function renderMappingTableWithExistingModal() {
             <option value="ignore" ${existingMap[col] === "ignore" ? "selected" : ""}>Do Not Import (Ignore)</option>
           </select>
         </td>
-        <td><button class="btn-sm btn-secondary" onclick="addCustomRowModal('${escapeHtml(col)}')">+ Custom</button></td>
+        <td><button class="btn-sm btn-secondary" onclick="addCustomRowModal('${escapeHtml(col)}')">Add Custom Name</button></td>
       </tr>
     `;
     })
@@ -409,29 +409,124 @@ function ignoreUnmapped() {
   updateMappingProgress();
 }
 
-function runSmartMatch() {
+async function runSmartMatch() {
+  console.log("runSmartMatch called with enhanced 4-level engine");
+
   const selects = document.querySelectorAll(".mapping-select");
-  let matchCount = 0;
+  if (selects.length === 0) return;
+
+  // Collect all unmapped columns with their sample data
+  const unmappedColumns = [];
+  const sampleDataMap = {};
+  const selectMap = {}; // Store reference to select elements
 
   selects.forEach((sel) => {
     if (!sel.value || sel.value === "") {
       const colName = sel.getAttribute("data-column");
-      if (window.attemptAutoMap) {
-        const suggestedMatch = window.attemptAutoMap(colName);
-        if (suggestedMatch) {
-          sel.value = suggestedMatch;
-          matchCount++;
-        }
-      }
+      unmappedColumns.push(colName);
+      sampleDataMap[colName] = currentSampleData[colName] || "";
+      selectMap[colName] = sel;
     }
   });
 
-  updateMappingProgress();
+  if (unmappedColumns.length === 0) {
+    showToast("All columns are already mapped!", "info");
+    return;
+  }
 
-  if (matchCount > 0) {
-    if (window.showToast) showToast(`✨ Smart Match found ${matchCount} fields!`, "success");
-  } else {
-    if (window.showToast) showToast("No new matches found.", "info");
+  showToast(`🤖 Smart matching ${unmappedColumns.length} columns using AI...`, "info");
+
+  try {
+    // Call the enhanced batch smart match API
+    const response = await fetch("/api/smart-match/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        columns: unmappedColumns,
+        clientId: currentMappingClientId,
+        sampleDataMap: sampleDataMap,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+
+    const results = await response.json();
+    let matchCount = 0;
+    let levelCounts = { "client-memory": 0, "global-memory": 0, algorithm: 0, "safety-net": 0 };
+
+    // Apply the matches
+    for (const [columnName, matchedField] of Object.entries(results)) {
+      if (matchedField && matchedField !== "ignore" && selectMap[columnName]) {
+        selectMap[columnName].value = matchedField;
+        matchCount++;
+
+        // Try to get match details from a separate call or from response
+        console.log(`✨ Smart matched: "${columnName}" → ${matchedField}`);
+      }
+    }
+
+    updateMappingProgress();
+
+    // Show detailed summary
+    let message = `✨ Smart Match found ${matchCount} fields!`;
+    if (matchCount > 0) {
+      showToast(message, "success");
+    } else {
+      showToast(`No matches found. Try manual mapping or check your column names.`, "info");
+    }
+
+    // Optional: Fetch match details for better feedback
+    if (matchCount > 0) {
+      try {
+        const detailsPromises = unmappedColumns.map(async (col) => {
+          if (results[col]) {
+            const detailResponse = await fetch("/api/smart-match", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                columnName: col,
+                clientId: currentMappingClientId,
+                sampleData: sampleDataMap[col],
+              }),
+            });
+            if (detailResponse.ok) {
+              const detail = await detailResponse.json();
+              if (detail.matchDetails) {
+                console.log(`📊 "${col}" matched via ${detail.matchDetails.source} (${detail.matchDetails.similarity}%)`);
+              }
+            }
+          }
+        });
+        await Promise.all(detailsPromises);
+      } catch (detailErr) {
+        console.log("Could not fetch match details");
+      }
+    }
+  } catch (err) {
+    console.error("Smart match error:", err);
+    showToast("Error during smart match: " + err.message, "error");
+
+    // Fallback to basic auto-map if enhanced matching fails
+    console.log("Falling back to basic auto-map...");
+    let fallbackCount = 0;
+    selects.forEach((sel) => {
+      if (!sel.value || sel.value === "") {
+        const colName = sel.getAttribute("data-column");
+        if (window.attemptAutoMap) {
+          const suggestedMatch = window.attemptAutoMap(colName);
+          if (suggestedMatch) {
+            sel.value = suggestedMatch;
+            fallbackCount++;
+          }
+        }
+      }
+    });
+    updateMappingProgress();
+    if (fallbackCount > 0) {
+      showToast(`⚠️ Using basic match: ${fallbackCount} fields mapped.`, "warning");
+    }
   }
 }
 
@@ -685,11 +780,16 @@ function setupFileUpload() {
         if (response.ok) {
           currentExcelColumns = result.columns;
           currentSampleData = result.sampleData || {};
+
+          // Store column info for smart matching
+          window.currentExcelColumns = currentExcelColumns;
+          window.currentSampleData = currentSampleData;
+
           document.getElementById("columnsStatusModal").innerHTML =
             `<p class="status-success">✅ Loaded ${result.columns.length} columns from "${escapeHtml(file.name)}" (${result.rowCount} rows)</p>`;
           renderMappingTableWithExistingModal();
           document.getElementById("mappingTableContainerModal").classList.remove("hidden");
-          if (window.showToast) showToast(`Loaded ${result.columns.length} columns`, "success");
+          if (window.showToast) showToast(`Loaded ${result.columns.length} columns. Click "Smart Match" to auto-map!`, "success");
         } else {
           if (window.showToast) showToast("Error: " + result.error, "error");
         }

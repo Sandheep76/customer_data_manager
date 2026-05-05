@@ -60,15 +60,13 @@
       <!-- ASSESSMENT TYPES TAB -->
       <div id="assessTypesTab" class="tab-content-panel">
         <div class="card">
-          <div class="client-selector mb-3">
-            <select id="assessTypeClientSelect">
-              <option value="all">-- All Clients --</option>
-            </select>
-          </div>
           <div class="flex-between mb-3">
             <div class="flex gap-2">
               <button id="showActiveAssessTypesBtn">Show Active</button>
               <button id="showAllAssessTypesBtn" class="btn-secondary">Show All</button>
+              <select id="assessTypeClientSelect" style="margin-left: 10px">
+                <option value="all">-- All Clients --</option>
+              </select>
             </div>
             <button id="addAssessTypeBtn" class="btn-success">+ Add New</button>
           </div>

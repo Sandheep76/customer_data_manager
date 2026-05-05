@@ -137,7 +137,6 @@ h1 {
 .table-wrapper {
   overflow-x: auto;
 }
-
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -159,28 +158,6 @@ h1 {
 .data-table tbody tr {
   cursor: pointer;
   user-select: none;
-}
-
-/* Make table wrapper scrollable with sticky header */
-.table-wrapper {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: 60vh;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-}
-
-/* Sticky table headers */
-.data-table thead th,
-.mapping-table thead th {
-  position: sticky;
-  top: 0;
-  background: #e4e7eb;
-  z-index: 10;
-  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
-}
-.mapping-table thead th {
-  background: #f0f2f5;
 }
 
 /* ==================== BUTTONS ==================== */
@@ -277,6 +254,11 @@ select {
   width: auto;
   min-width: 180px;
 }
+.small-dropdown {
+  min-width: 180px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+}
 
 /* ==================== BADGES ==================== */
 .badge-active {
@@ -349,6 +331,7 @@ select {
   background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
 }
+
 .modal-content {
   background: white;
   margin: 50px auto;
@@ -359,6 +342,7 @@ select {
   max-height: 85vh;
   overflow-y: auto;
 }
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -433,6 +417,7 @@ select {
   margin-bottom: 0;
   padding-left: 0;
 }
+
 .readonly-field {
   background: #f0f2f5;
   cursor: not-allowed;
@@ -519,37 +504,12 @@ select {
 .mapping-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
 }
 .mapping-table th,
 .mapping-table td {
   padding: 8px;
   text-align: left;
   border-bottom: 1px solid #eee;
-}
-
-/* Mapping table column widths - percentage based */
-.mapping-table th:first-child,
-.mapping-table td:first-child {
-  width: 25%;
-}
-.mapping-table th:nth-child(2),
-.mapping-table td:nth-child(2) {
-  width: 25%;
-}
-.mapping-table th:nth-child(3),
-.mapping-table td:nth-child(3) {
-  width: 5%;
-  text-align: center;
-}
-.mapping-table th:nth-child(4),
-.mapping-table td:nth-child(4) {
-  width: 35%;
-}
-.mapping-table th:last-child,
-.mapping-table td:last-child {
-  width: 10%;
-  text-align: right;
 }
 
 /* Mapping table dropdowns - simple/normal border */
@@ -562,20 +522,90 @@ select {
   padding: 6px 8px;
 }
 
-/* Client dropdowns - wider with blue border */
+/* Make table header sticky so it stays visible when scrolling */
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  background: #e4e7eb;
+  z-index: 10;
+  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* For mapping table header */
+.mapping-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f0f2f5;
+  z-index: 10;
+  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Mapping table column widths - percentage based */
+.mapping-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.mapping-table th:first-child,
+.mapping-table td:first-child {
+  width: 25%; /* Column Title */
+}
+
+.mapping-table th:nth-child(2),
+.mapping-table td:nth-child(2) {
+  width: 25%; /* Sample Data */
+}
+
+.mapping-table th:nth-child(3),
+.mapping-table td:nth-child(3) {
+  width: 5%; /* Arrow (➡️) */
+  text-align: center;
+}
+
+.mapping-table th:nth-child(4),
+.mapping-table td:nth-child(4) {
+  width: 35%; /* Map to System Field (dropdown) */
+}
+
+.mapping-table th:last-child,
+.mapping-table td:last-child {
+  width: 10%; /* Action button */
+  text-align: right;
+}
+
+/* Update all dropdowns to consistent width */
+select,
+.small-dropdown,
 #mappingClientSelect,
 #clientSelect,
 #assessTypeClientSelect,
 #assessTypeSelect,
 #mappingTemplateSelect,
-#projectAssessType,
-.small-dropdown {
+#projectAssessType {
   min-width: 400px !important;
   width: auto;
+}
+
+/* Add blue border and light background to dropdowns */
+select,
+.small-dropdown,
+#mappingClientSelect,
+#clientSelect,
+#assessTypeClientSelect,
+#assessTypeSelect,
+#mappingTemplateSelect,
+#projectAssessType {
   border: 2px solid #1a73e8 !important;
   background-color: #fff8f0 !important;
   border-radius: 6px;
   padding: 8px 12px;
+}
+
+/* For dropdowns in modals (keep same style) */
+.modal select,
+.modal .small-dropdown {
+  border: 2px solid #1a73e8 !important;
+  background-color: #fff8f0 !important;
 }
 
 .smart-match-btn {
@@ -603,6 +633,12 @@ select {
   text-align: center;
   padding: 30px;
   color: #666;
+}
+
+/* Mapping Client Dropdown */
+#mappingClientSelect {
+  min-width: 400px !important;
+  width: auto;
 }
 
 /* ==================== LOGO & IMAGES ==================== */

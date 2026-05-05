@@ -71,9 +71,7 @@ const uploadLogo = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png|gif|svg|webp/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
     if (extname && mimetype) return cb(null, true);
     cb(new Error("Only image files are allowed"));
@@ -118,12 +116,8 @@ app.get("/api/assess-types/all", async (req, res, next) => {
 app.get("/api/assess-types/by-id/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
-      "SELECT * FROM assess_types WHERE id = $1",
-      [id],
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: "Assess type not found" });
+    const result = await pool.query("SELECT * FROM assess_types WHERE id = $1", [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Assess type not found" });
     res.json(result.rows[0]);
   } catch (err) {
     next(err);
@@ -145,26 +139,14 @@ app.get("/api/assess-types/client/:clientId", async (req, res, next) => {
 });
 
 app.post("/api/assess-types", async (req, res, next) => {
-  const {
-    client_id,
-    assess_type,
-    assess_full_name,
-    name_on_report,
-    assess_version,
-    assess_type_description,
-    is_default,
-    created_by,
-  } = req.body;
+  const { client_id, assess_type, assess_full_name, name_on_report, assess_version, assess_type_description, is_default, created_by } = req.body;
   if (!validateRequired({ client_id, assess_type }, res)) return;
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     if (is_default) {
-      await client.query(
-        "UPDATE assess_types SET is_default = false WHERE client_id = $1",
-        [client_id],
-      );
+      await client.query("UPDATE assess_types SET is_default = false WHERE client_id = $1", [client_id]);
     }
     const result = await client.query(
       `INSERT INTO assess_types (client_id, assess_type, assess_full_name, name_on_report, assess_version, assess_type_description, is_default, created_by) 
@@ -193,23 +175,11 @@ app.post("/api/assess-types", async (req, res, next) => {
 app.put("/api/assess-types/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const {
-      client_id,
-      assess_type,
-      assess_full_name,
-      name_on_report,
-      assess_version,
-      assess_type_description,
-      is_active,
-      is_default,
-    } = req.body;
+    const { client_id, assess_type, assess_full_name, name_on_report, assess_version, assess_type_description, is_active, is_default } = req.body;
 
     let targetClientId = client_id;
     if (!targetClientId) {
-      const clientResult = await pool.query(
-        "SELECT client_id FROM assess_types WHERE id = $1",
-        [id],
-      );
+      const clientResult = await pool.query("SELECT client_id FROM assess_types WHERE id = $1", [id]);
       if (clientResult.rows.length === 0) {
         return res.status(404).json({ error: "Assess type not found" });
       }
@@ -217,10 +187,7 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
     }
 
     if (is_default && targetClientId) {
-      await pool.query(
-        "UPDATE assess_types SET is_default = false WHERE client_id = $1 AND id != $2",
-        [targetClientId, id],
-      );
+      await pool.query("UPDATE assess_types SET is_default = false WHERE client_id = $1 AND id != $2", [targetClientId, id]);
     }
 
     const result = await pool.query(
@@ -235,17 +202,7 @@ app.put("/api/assess-types/:id", async (req, res, next) => {
         client_id = $8, 
         updated_at = CURRENT_TIMESTAMP 
       WHERE id = $9 RETURNING *`,
-      [
-        assess_type,
-        assess_full_name,
-        name_on_report,
-        assess_version,
-        assess_type_description,
-        is_active,
-        is_default,
-        targetClientId,
-        id,
-      ],
+      [assess_type, assess_full_name, name_on_report, assess_version, assess_type_description, is_active, is_default, targetClientId, id],
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -271,17 +228,7 @@ app.get("/api/assess-types/all/export", async (req, res, next) => {
     const result = await pool.query(query);
 
     if (format === "csv") {
-      const headers = [
-        "Client Name",
-        "Assess Type",
-        "Full Name",
-        "Report Name",
-        "Version",
-        "Description",
-        "Is Default",
-        "Is Active",
-        "Created Date",
-      ];
+      const headers = ["Client Name", "Assess Type", "Full Name", "Report Name", "Version", "Description", "Is Default", "Is Active", "Created Date"];
       const csvRows = [headers.join(",")];
       for (const at of result.rows) {
         csvRows.push(
@@ -299,23 +246,14 @@ app.get("/api/assess-types/all/export", async (req, res, next) => {
         );
       }
       res.setHeader("Content-Type", "text/csv");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=assess_types_all.csv`,
-      );
+      res.setHeader("Content-Disposition", `attachment; filename=assess_types_all.csv`);
       res.send(csvRows.join("\n"));
     } else {
       const worksheet = XLSX.utils.json_to_sheet(result.rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "All Assessment Types");
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      );
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=assess_types_all.xlsx`,
-      );
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=assess_types_all.xlsx`);
       res.send(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
     }
   } catch (err) {
@@ -335,17 +273,7 @@ app.get("/api/assess-types/export/client/:clientId", async (req, res, next) => {
     const result = await pool.query(query, [clientId]);
 
     if (format === "csv") {
-      const headers = [
-        "Client Name",
-        "Assess Type",
-        "Full Name",
-        "Report Name",
-        "Version",
-        "Description",
-        "Is Default",
-        "Is Active",
-        "Created Date",
-      ];
+      const headers = ["Client Name", "Assess Type", "Full Name", "Report Name", "Version", "Description", "Is Default", "Is Active", "Created Date"];
       const csvRows = [headers.join(",")];
       for (const at of result.rows) {
         csvRows.push(
@@ -363,23 +291,14 @@ app.get("/api/assess-types/export/client/:clientId", async (req, res, next) => {
         );
       }
       res.setHeader("Content-Type", "text/csv");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=assess_types_client_${clientId}.csv`,
-      );
+      res.setHeader("Content-Disposition", `attachment; filename=assess_types_client_${clientId}.csv`);
       res.send(csvRows.join("\n"));
     } else {
       const worksheet = XLSX.utils.json_to_sheet(result.rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Assessment Types");
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      );
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=assess_types_client_${clientId}.xlsx`,
-      );
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=assess_types_client_${clientId}.xlsx`);
       res.send(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
     }
   } catch (err) {
@@ -393,9 +312,7 @@ app.get("/api/clients", async (req, res, next) => {
   try {
     const { showAll } = req.query;
     let query = "SELECT * FROM clients ORDER BY client_name";
-    if (showAll !== "true")
-      query =
-        "SELECT * FROM clients WHERE is_active = true ORDER BY client_name";
+    if (showAll !== "true") query = "SELECT * FROM clients WHERE is_active = true ORDER BY client_name";
     const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
@@ -443,9 +360,7 @@ app.get("/api/clients/export", async (req, res, next) => {
             client.is_active ? "Yes" : "No",
             `"${(client.default_cust_country || "Canada").replace(/"/g, '""')}"`,
             `"${(client.default_job_country || "Canada").replace(/"/g, '""')}"`,
-            client.created_at
-              ? new Date(client.created_at).toLocaleDateString()
-              : "",
+            client.created_at ? new Date(client.created_at).toLocaleDateString() : "",
           ].join(","),
         );
       }
@@ -456,10 +371,7 @@ app.get("/api/clients/export", async (req, res, next) => {
       const worksheet = XLSX.utils.json_to_sheet(clients);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Clients");
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      );
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=clients.xlsx`);
       res.send(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
     }
@@ -470,11 +382,8 @@ app.get("/api/clients/export", async (req, res, next) => {
 
 app.get("/api/clients/:id", async (req, res, next) => {
   try {
-    const result = await pool.query("SELECT * FROM clients WHERE id = $1", [
-      req.params.id,
-    ]);
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: "Client not found" });
+    const result = await pool.query("SELECT * FROM clients WHERE id = $1", [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Client not found" });
     res.json(result.rows[0]);
   } catch (err) {
     next(err);
@@ -487,26 +396,13 @@ app.post("/api/clients", async (req, res, next) => {
   const industry = sanitize(req.body.industry);
   const contact_person = sanitize(req.body.contact_person);
 
-  const {
-    client_logo,
-    contact_email,
-    contact_phone,
-    is_active,
-    default_cust_country,
-    default_job_country,
-  } = req.body;
+  const { client_logo, contact_email, contact_phone, is_active, default_cust_country, default_job_country } = req.body;
 
   if (!validateRequired({ client_name }, res)) return;
 
   try {
-    const exists = await pool.query(
-      "SELECT id FROM clients WHERE client_name = $1",
-      [client_name],
-    );
-    if (exists.rows.length)
-      return res
-        .status(400)
-        .json({ error: "A client with this name already exists" });
+    const exists = await pool.query("SELECT id FROM clients WHERE client_name = $1", [client_name]);
+    if (exists.rows.length) return res.status(400).json({ error: "A client with this name already exists" });
 
     const result = await pool.query(
       `INSERT INTO clients (client_name, client_abbreviation, client_logo, industry, contact_person, contact_email, contact_phone, is_active, default_cust_country, default_job_country) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
@@ -537,21 +433,11 @@ app.put("/api/clients/:id", async (req, res, next) => {
     const industry = sanitize(req.body.industry);
     const contact_person = sanitize(req.body.contact_person);
 
-    const {
-      client_logo,
-      contact_email,
-      contact_phone,
-      is_active,
-      default_cust_country,
-      default_job_country,
-    } = req.body;
+    const { client_logo, contact_email, contact_phone, is_active, default_cust_country, default_job_country } = req.body;
 
     let logoToSave = client_logo;
     if (logoToSave === undefined || logoToSave === null) {
-      const existing = await pool.query(
-        "SELECT client_logo FROM clients WHERE id = $1",
-        [id],
-      );
+      const existing = await pool.query("SELECT client_logo FROM clients WHERE id = $1", [id]);
       logoToSave = existing.rows[0]?.client_logo;
     }
 
@@ -580,14 +466,8 @@ app.put("/api/clients/:id", async (req, res, next) => {
 app.delete("/api/clients/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const projects = await pool.query(
-      "SELECT id FROM projects WHERE client_id = $1 LIMIT 1",
-      [id],
-    );
-    if (projects.rows.length > 0)
-      return res
-        .status(400)
-        .json({ error: "Cannot delete client with existing projects." });
+    const projects = await pool.query("SELECT id FROM projects WHERE client_id = $1 LIMIT 1", [id]);
+    if (projects.rows.length > 0) return res.status(400).json({ error: "Cannot delete client with existing projects." });
     await pool.query("DELETE FROM clients WHERE id = $1 RETURNING id", [id]);
     res.json({ message: "Client deleted successfully" });
   } catch (err) {
@@ -597,67 +477,43 @@ app.delete("/api/clients/:id", async (req, res, next) => {
 
 // ============ LOGO UPLOAD & DELETE ============
 
-app.post(
-  "/api/clients/:id/logo",
-  uploadLogo.single("logo"),
-  async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+app.post("/api/clients/:id/logo", uploadLogo.single("logo"), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-      const logoPath = `/uploads/logos/${req.file.filename}`;
-      const oldClient = await pool.query(
-        "SELECT client_logo FROM clients WHERE id = $1",
-        [id],
-      );
-      if (oldClient.rows[0]?.client_logo) {
-        const oldLogoPath = path.join(
-          __dirname,
-          "public",
-          oldClient.rows[0].client_logo,
-        );
-        try {
-          await fsPromises.access(oldLogoPath);
-          await fsPromises.unlink(oldLogoPath);
-        } catch (e) {}
-      }
-
-      const result = await pool.query(
-        "UPDATE clients SET client_logo = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
-        [logoPath, id],
-      );
-      res.json({
-        message: "Logo uploaded successfully",
-        logoPath: logoPath,
-        client: result.rows[0],
-      });
-    } catch (err) {
-      next(err);
+    const logoPath = `/uploads/logos/${req.file.filename}`;
+    const oldClient = await pool.query("SELECT client_logo FROM clients WHERE id = $1", [id]);
+    if (oldClient.rows[0]?.client_logo) {
+      const oldLogoPath = path.join(__dirname, "public", oldClient.rows[0].client_logo);
+      try {
+        await fsPromises.access(oldLogoPath);
+        await fsPromises.unlink(oldLogoPath);
+      } catch (e) {}
     }
-  },
-);
+
+    const result = await pool.query("UPDATE clients SET client_logo = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *", [logoPath, id]);
+    res.json({
+      message: "Logo uploaded successfully",
+      logoPath: logoPath,
+      client: result.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.delete("/api/clients/:id/logo", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const client = await pool.query(
-      "SELECT client_logo FROM clients WHERE id = $1",
-      [id],
-    );
+    const client = await pool.query("SELECT client_logo FROM clients WHERE id = $1", [id]);
     if (client.rows[0]?.client_logo) {
-      const logoPath = path.join(
-        __dirname,
-        "public",
-        client.rows[0].client_logo,
-      );
+      const logoPath = path.join(__dirname, "public", client.rows[0].client_logo);
       try {
         await fsPromises.access(logoPath);
         await fsPromises.unlink(logoPath);
       } catch (e) {}
-      await pool.query(
-        "UPDATE clients SET client_logo = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
-        [id],
-      );
+      await pool.query("UPDATE clients SET client_logo = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
     }
     res.json({ message: "Logo removed successfully" });
   } catch (err) {
@@ -687,20 +543,10 @@ app.get("/api/clients/:clientId/projects", async (req, res, next) => {
 app.get("/api/projects/:projectId", async (req, res, next) => {
   try {
     const { projectId } = req.params;
-    const projectResult = await pool.query(
-      "SELECT * FROM projects WHERE id = $1",
-      [projectId],
-    );
-    if (projectResult.rows.length === 0)
-      return res.status(404).json({ error: "Project not found" });
-    const contactsResult = await pool.query(
-      "SELECT * FROM contacts WHERE project_id = $1",
-      [projectId],
-    );
-    const stakeholdersResult = await pool.query(
-      "SELECT * FROM stakeholders WHERE project_id = $1",
-      [projectId],
-    );
+    const projectResult = await pool.query("SELECT * FROM projects WHERE id = $1", [projectId]);
+    if (projectResult.rows.length === 0) return res.status(404).json({ error: "Project not found" });
+    const contactsResult = await pool.query("SELECT * FROM contacts WHERE project_id = $1", [projectId]);
+    const stakeholdersResult = await pool.query("SELECT * FROM stakeholders WHERE project_id = $1", [projectId]);
     res.json({
       project: projectResult.rows[0],
       contacts: contactsResult.rows,
@@ -877,26 +723,10 @@ app.delete("/api/projects/:id", async (req, res, next) => {
 
 app.post("/api/contacts", async (req, res, next) => {
   try {
-    const {
-      client_id,
-      project_id,
-      contact_name,
-      role,
-      phone,
-      email,
-      is_primary,
-    } = req.body;
+    const { client_id, project_id, contact_name, role, phone, email, is_primary } = req.body;
     const result = await pool.query(
       `INSERT INTO contacts (client_id, project_id, contact_name, role, phone, email, is_primary) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [
-        client_id,
-        project_id,
-        contact_name,
-        role,
-        phone,
-        email,
-        is_primary || false,
-      ],
+      [client_id, project_id, contact_name, role, phone, email, is_primary || false],
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -915,24 +745,10 @@ app.delete("/api/contacts/:id", async (req, res, next) => {
 
 app.post("/api/stakeholders", async (req, res, next) => {
   try {
-    const {
-      client_id,
-      project_id,
-      stakeholder_name,
-      stakeholder_type,
-      company_name,
-      role_on_project,
-    } = req.body;
+    const { client_id, project_id, stakeholder_name, stakeholder_type, company_name, role_on_project } = req.body;
     const result = await pool.query(
       `INSERT INTO stakeholders (client_id, project_id, stakeholder_name, stakeholder_type, company_name, role_on_project) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [
-        client_id,
-        project_id,
-        stakeholder_name,
-        stakeholder_type,
-        company_name,
-        role_on_project,
-      ],
+      [client_id, project_id, stakeholder_name, stakeholder_type, company_name, role_on_project],
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -951,109 +767,84 @@ app.delete("/api/stakeholders/:id", async (req, res, next) => {
 
 // ============ EXCEL UPLOAD ROUTES ============
 
-app.post(
-  "/api/upload/:clientId",
-  secureExcelUpload.single("excel"),
-  async (req, res, next) => {
-    try {
-      const { clientId } = req.params;
-      const { assessType, mappingName } = req.query;
-      const filePath = req.file.path;
+app.post("/api/upload/:clientId", secureExcelUpload.single("excel"), async (req, res, next) => {
+  try {
+    const { clientId } = req.params;
+    const { assessType, mappingName } = req.query;
+    const filePath = req.file.path;
 
-      console.log(
-        `📄 Starting import for client ${clientId} from file: ${req.file.originalname}`,
-      );
-      console.log(`📋 Selected Mapping: ${mappingName || "Not provided"}`);
+    console.log(`📄 Starting import for client ${clientId} from file: ${req.file.originalname}`);
+    console.log(`📋 Selected Mapping: ${mappingName || "Not provided"}`);
 
-      const importer = new ExcelImporter(pool);
-      const results = await importer.importExcel(
-        filePath,
-        parseInt(clientId),
-        assessType,
-        mappingName,
-      );
+    const importer = new ExcelImporter(pool);
+    const results = await importer.importExcel(filePath, parseInt(clientId), assessType, mappingName);
 
-      res.json({
-        message: `Import completed. ${results.success} rows succeeded, ${results.failed} failed.`,
-        summary: {
-          success: results.success,
-          failed: results.failed,
-          projects_created: results.projects.length,
-          contacts_created: results.contacts.length,
-          stakeholders_created: results.stakeholders.length,
-        },
-        errors: results.errors.length > 0 ? results.errors : undefined,
-      });
-    } catch (err) {
-      console.error("❌ Import error:", err);
-      res.status(500).json({ error: err.message });
-    } finally {
-      if (req.file && req.file.path) {
-        try {
-          await fsPromises.unlink(req.file.path);
-        } catch (e) {}
-      }
+    res.json({
+      message: `Import completed. ${results.success} rows succeeded, ${results.failed} failed.`,
+      summary: {
+        success: results.success,
+        failed: results.failed,
+        projects_created: results.projects.length,
+        contacts_created: results.contacts.length,
+        stakeholders_created: results.stakeholders.length,
+      },
+      errors: results.errors.length > 0 ? results.errors : undefined,
+    });
+  } catch (err) {
+    console.error("❌ Import error:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (req.file && req.file.path) {
+      try {
+        await fsPromises.unlink(req.file.path);
+      } catch (e) {}
     }
-  },
-);
+  }
+});
 
-app.post(
-  "/api/get-excel-columns",
-  secureExcelUpload.single("excel"),
-  async (req, res, next) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-      const workbook = XLSX.readFile(req.file.path);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet);
+app.post("/api/get-excel-columns", secureExcelUpload.single("excel"), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const workbook = XLSX.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet);
 
-      if (rows.length === 0)
-        return res.status(400).json({ error: "Excel file is empty" });
+    if (rows.length === 0) return res.status(400).json({ error: "Excel file is empty" });
 
-      const columns = Object.keys(rows[0]);
-      const sampleData = {};
-      columns.forEach((col) => {
-        for (let i = 0; i < rows.length; i++) {
-          const value = rows[i][col];
-          if (
-            value !== undefined &&
-            value !== null &&
-            String(value).trim() !== ""
-          ) {
-            sampleData[col] =
-              String(value).length > 50
-                ? String(value).substring(0, 50) + "..."
-                : String(value);
-            break;
-          }
+    const columns = Object.keys(rows[0]);
+    const sampleData = {};
+    columns.forEach((col) => {
+      for (let i = 0; i < rows.length; i++) {
+        const value = rows[i][col];
+        if (value !== undefined && value !== null && String(value).trim() !== "") {
+          sampleData[col] = String(value).length > 50 ? String(value).substring(0, 50) + "..." : String(value);
+          break;
         }
-        if (!sampleData[col]) {
-          sampleData[col] = "—";
-        }
-      });
-
-      res.json({ columns, rowCount: rows.length, sampleData });
-    } catch (err) {
-      console.error("Error reading Excel:", err);
-      res.status(500).json({ error: err.message });
-    } finally {
-      if (req.file && req.file.path) {
-        try {
-          await fsPromises.unlink(req.file.path);
-        } catch (e) {}
       }
+      if (!sampleData[col]) {
+        sampleData[col] = "—";
+      }
+    });
+
+    res.json({ columns, rowCount: rows.length, sampleData });
+  } catch (err) {
+    console.error("Error reading Excel:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (req.file && req.file.path) {
+      try {
+        await fsPromises.unlink(req.file.path);
+      } catch (e) {}
     }
-  },
-);
+  }
+});
 
 // ============ FIELD MAPPINGS CRUD & EXPORTS ============
 
 app.get("/api/mapping-definitions", async (req, res, next) => {
   try {
-    const result = await pool.query(
-      "SELECT target_field, display_name, category FROM mapping_definitions ORDER BY sort_order",
-    );
+    const result = await pool.query("SELECT target_field, display_name, category FROM mapping_definitions ORDER BY sort_order");
     res.json(result.rows);
   } catch (err) {
     next(err);
@@ -1080,10 +871,9 @@ app.get("/api/column-mappings/:clientId", async (req, res, next) => {
 
 app.get("/api/column-mappings/:clientId/names", async (req, res, next) => {
   try {
-    const result = await pool.query(
-      "SELECT DISTINCT mapping_name, is_active FROM column_mappings WHERE client_id = $1 ORDER BY mapping_name",
-      [req.params.clientId],
-    );
+    const result = await pool.query("SELECT DISTINCT mapping_name, is_active FROM column_mappings WHERE client_id = $1 ORDER BY mapping_name", [
+      req.params.clientId,
+    ]);
     res.json(result.rows);
   } catch (err) {
     next(err);
@@ -1095,23 +885,13 @@ app.post("/api/column-mappings", async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query(
-      "DELETE FROM column_mappings WHERE client_id = $1 AND mapping_name = $2",
-      [client_id, mapping_name],
-    );
+    await client.query("DELETE FROM column_mappings WHERE client_id = $1 AND mapping_name = $2", [client_id, mapping_name]);
 
     if (mappings && mappings.length > 0) {
       for (const mapping of mappings) {
         await client.query(
           `INSERT INTO column_mappings (client_id, mapping_name, excel_column, target_field, is_custom_field, created_by) VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            client_id,
-            mapping_name,
-            mapping.excel_column,
-            mapping.target_field,
-            mapping.is_custom_field || false,
-            created_by || "admin",
-          ],
+          [client_id, mapping_name, mapping.excel_column, mapping.target_field, mapping.is_custom_field || false, created_by || "admin"],
         );
       }
     }
@@ -1128,21 +908,15 @@ app.post("/api/column-mappings", async (req, res, next) => {
   }
 });
 
-app.delete(
-  "/api/column-mappings/:clientId/:mappingName",
-  async (req, res, next) => {
-    try {
-      const { clientId, mappingName } = req.params;
-      await pool.query(
-        "DELETE FROM column_mappings WHERE client_id = $1 AND mapping_name = $2",
-        [clientId, mappingName],
-      );
-      res.json({ message: "Mapping deleted successfully" });
-    } catch (err) {
-      next(err);
-    }
-  },
-);
+app.delete("/api/column-mappings/:clientId/:mappingName", async (req, res, next) => {
+  try {
+    const { clientId, mappingName } = req.params;
+    await pool.query("DELETE FROM column_mappings WHERE client_id = $1 AND mapping_name = $2", [clientId, mappingName]);
+    res.json({ message: "Mapping deleted successfully" });
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.get("/api/column-mappings/:clientId/export", async (req, res, next) => {
   try {
@@ -1159,14 +933,7 @@ app.get("/api/column-mappings/:clientId/export", async (req, res, next) => {
     const result = await pool.query(query, params);
 
     if (format === "csv") {
-      const headers = [
-        "Mapping Name",
-        "Excel Column",
-        "Target Field",
-        "Display Name",
-        "Is Custom Field",
-        "Created Date",
-      ];
+      const headers = ["Mapping Name", "Excel Column", "Target Field", "Display Name", "Is Custom Field", "Created Date"];
       const csvRows = [headers.join(",")];
       for (const m of result.rows) {
         csvRows.push(
@@ -1181,23 +948,14 @@ app.get("/api/column-mappings/:clientId/export", async (req, res, next) => {
         );
       }
       res.setHeader("Content-Type", "text/csv");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=mappings_client_${clientId}.csv`,
-      );
+      res.setHeader("Content-Disposition", `attachment; filename=mappings_client_${clientId}.csv`);
       res.send(csvRows.join("\n"));
     } else {
       const worksheet = XLSX.utils.json_to_sheet(result.rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Mappings");
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      );
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=mappings_client_${clientId}.xlsx`,
-      );
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=mappings_client_${clientId}.xlsx`);
       res.send(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
     }
   } catch (err) {
@@ -1210,10 +968,7 @@ app.get("/api/column-mappings/:clientId/export", async (req, res, next) => {
 app.get("/api/projects/:projectId/status", async (req, res, next) => {
   try {
     const { projectId } = req.params;
-    const result = await pool.query(
-      "SELECT * FROM project_interview_status WHERE project_id = $1",
-      [projectId],
-    );
+    const result = await pool.query("SELECT * FROM project_interview_status WHERE project_id = $1", [projectId]);
     if (result.rows.length === 0) {
       return res.json({
         project_id: parseInt(projectId),
@@ -1307,6 +1062,63 @@ app.post("/api/projects/:projectId/status", async (req, res, next) => {
     );
     res.json(result.rows[0]);
   } catch (err) {
+    next(err);
+  }
+});
+
+// ============ SMART MATCH API ============
+const SmartMatchEngine = require("./smartMatchEngine");
+
+// Single column smart match
+app.post("/api/smart-match", async (req, res, next) => {
+  try {
+    const { columnName, clientId, sampleData } = req.body;
+
+    if (!columnName || !clientId) {
+      return res.status(400).json({ error: "columnName and clientId are required" });
+    }
+
+    const smartMatchEngine = new SmartMatchEngine(pool);
+    const result = await smartMatchEngine.smartMatch(columnName, parseInt(clientId), sampleData);
+
+    res.json({
+      matchedField: result?.target_field || null,
+      matchDetails: result,
+    });
+  } catch (err) {
+    console.error("Smart match error:", err);
+    next(err);
+  }
+});
+
+// Batch smart match for multiple columns
+app.post("/api/smart-match/batch", async (req, res, next) => {
+  try {
+    const { columns, clientId, sampleDataMap } = req.body;
+
+    if (!columns || !clientId) {
+      return res.status(400).json({ error: "columns and clientId are required" });
+    }
+
+    const smartMatchEngine = new SmartMatchEngine(pool);
+    const results = await smartMatchEngine.batchSmartMatch(columns, parseInt(clientId), sampleDataMap);
+
+    res.json(results);
+  } catch (err) {
+    console.error("Batch smart match error:", err);
+    next(err);
+  }
+});
+
+// Get client template analytics
+app.get("/api/smart-match/analytics/:clientId", async (req, res, next) => {
+  try {
+    const { clientId } = req.params;
+    const smartMatchEngine = new SmartMatchEngine(pool);
+    const analytics = await smartMatchEngine.getClientAnalytics(parseInt(clientId));
+    res.json(analytics);
+  } catch (err) {
+    console.error("Analytics error:", err);
     next(err);
   }
 });

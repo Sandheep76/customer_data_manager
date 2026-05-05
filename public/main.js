@@ -6,7 +6,7 @@ let currentAssessTypeClientId = null;
 let statusTimeout = null;
 let allProjects = [];
 let currentPage = 1;
-let itemsPerPage = 10;
+let itemsPerPage = 15;
 let totalPages = 1;
 let allClientsData = [];
 let currentClientPage = 1;
@@ -95,7 +95,10 @@ function clearStatusMessage(elementId) {
 }
 
 function attemptAutoMap(excelCol) {
-  const cleanCol = excelCol.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  const cleanCol = excelCol
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, "")
+    .trim();
   if (AUTO_MAP_DICT[cleanCol]) return AUTO_MAP_DICT[cleanCol];
   for (const [key, val] of Object.entries(AUTO_MAP_DICT)) {
     if (cleanCol.includes(key) || key.includes(cleanCol)) return val;

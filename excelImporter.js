@@ -1,9 +1,53 @@
-// excelImporter.js - FULLY MIGRATED TO CLIENT_ID
+// excelImporter.js - FULLY MIGRATED TO CLIENT_ID with Formula Injection Protection
 const XLSX = require("xlsx");
 
 class ExcelImporter {
   constructor(pool) {
     this.pool = pool;
+  }
+
+  // ==================== FORMULA INJECTION PROTECTION ====================
+  sanitizeExcelValue(value) {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string') return value;
+    
+    const str = String(value).trim();
+    if (str === '') return value;
+    
+    // Check if the string starts with formula injection characters
+    const dangerousPrefixes = ['=', '+', '-', '@', '\t', '\r'];
+    
+    // Check for common formula injection patterns
+    const formulaPatterns = [
+      /^=HYPERLINK\(/i,
+      /^=cmd\|/i,
+      /^=powershell/i,
+      /^=rundll32/i,
+      /^=mshta/i,
+      /^=wscript/i,
+      /^=cscript/i,
+      /^=DDE\(/i,
+      /^=table\(/i,
+      /^=shell\(/i,
+      /^=execute\(/i,
+      /^=eval\(/i,
+    ];
+    
+    // Check first character
+    if (dangerousPrefixes.includes(str.charAt(0))) {
+      console.warn(`⚠️ Sanitized potential formula injection: ${str.substring(0, 50)}`);
+      return `'${str}`; // Prepend single quote to neutralize
+    }
+    
+    // Check for formula patterns
+    for (const pattern of formulaPatterns) {
+      if (pattern.test(str)) {
+        console.warn(`⚠️ Sanitized potential formula injection: ${str.substring(0, 50)}`);
+        return `'${str}`;
+      }
+    }
+    
+    return value;
   }
 
   // Split multiple names using delimiter (prefer ; then & then ,)
@@ -188,25 +232,27 @@ class ExcelImporter {
     let contactData = {};
     for (const [colName, value] of Object.entries(row)) {
       if (!value) continue;
+      // SANITIZE the value
+      const sanitizedValue = this.sanitizeExcelValue(value);
       const contactType = this.matchColumn(colName, contactPatterns);
       if (contactType) {
         const parts = contactType.split("_");
         const field = parts.length > 1 ? parts[1] : parts[0];
-        contactData[field] = value;
+        contactData[field] = sanitizedValue;
       }
     }
 
     if (contactData.name || contactData.phone || contactData.email) {
       contacts.push({
         project_id: projectId,
-        contact_name: contactData.name || "Unknown",
-        role: contactData.role || contactData.title || "Contact",
-        phone: contactData.phone || null,
-        email: contactData.email || null,
+        contact_name: this.sanitizeExcelValue(contactData.name) || "Unknown",
+        role: this.sanitizeExcelValue(contactData.role) || this.sanitizeExcelValue(contactData.title) || "Contact",
+        phone: this.sanitizeExcelValue(contactData.phone) || null,
+        email: this.sanitizeExcelValue(contactData.email) || null,
         is_primary: true,
         custom_fields: {
-          title: contactData.title || null,
-          project_role: contactData.role || null,
+          title: this.sanitizeExcelValue(contactData.title) || null,
+          project_role: this.sanitizeExcelValue(contactData.role) || null,
         },
       });
     }
@@ -220,18 +266,19 @@ class ExcelImporter {
 
     for (const [colName, value] of Object.entries(row)) {
       if (!value || value === "NA") continue;
+      // SANITIZE the value
+      const sanitizedValue = this.sanitizeExcelValue(value);
       const stakeholderType = this.matchColumn(colName, stakeholderPatterns);
       if (stakeholderType) {
-        const names = this.splitMultipleNames(String(value));
+        const names = this.splitMultipleNames(String(sanitizedValue));
         for (const name of names) {
           stakeholders.push({
             project_id: projectId,
-            stakeholder_name: name,
+            stakeholder_name: this.sanitizeExcelValue(name),
             stakeholder_type: stakeholderType
               .replace(/_/g, " ")
               .replace(/\b\w/g, (l) => l.toUpperCase()),
-            company_name:
-              stakeholderType === "construction_company" ? name : null,
+            company_name: stakeholderType === "construction_company" ? this.sanitizeExcelValue(name) : null,
             role_on_project: stakeholderType
               .replace(/_/g, " ")
               .replace(/\b\w/g, (l) => l.toUpperCase()),
@@ -248,19 +295,23 @@ class ExcelImporter {
     const mappedColumns = new Set(Object.values(rawMappings));
     for (const [colName, value] of Object.entries(row)) {
       if (value === undefined || value === null || value === "NA") continue;
+      
+      // SANITIZE the value
+      const sanitizedValue = this.sanitizeExcelValue(value);
+      
       if (!mappedColumns.has(colName)) {
         if (
-          typeof value === "number" &&
+          typeof sanitizedValue === "number" &&
           (colName.includes("Date") ||
             colName.includes("Start") ||
             colName.includes("Complete"))
         ) {
-          const jsDate = this.excelDateToJSDate(value);
+          const jsDate = this.excelDateToJSDate(sanitizedValue);
           customFields[colName] = jsDate
             ? jsDate.toISOString().split("T")[0]
-            : value;
+            : sanitizedValue;
         } else {
-          customFields[colName] = value;
+          customFields[colName] = sanitizedValue;
         }
       }
     }
@@ -282,7 +333,7 @@ class ExcelImporter {
       stakeholders: [],
     };
 
-    // 1. CRITICAL FIX: Check out a dedicated connection for all transactions
+    // Check out a dedicated connection for all transactions
     const dbClient = await this.pool.connect();
 
     try {
@@ -310,7 +361,6 @@ class ExcelImporter {
         const row = rows[i];
 
         try {
-          // 2. CRITICAL FIX: Use the dedicated client, not the random pool
           await dbClient.query("BEGIN");
 
           let assessTypeToUse = selectedAssessTypeFromDropdown;
@@ -351,78 +401,81 @@ class ExcelImporter {
           for (const [colName, value] of Object.entries(row)) {
             if (value === undefined || value === null || value === "NA")
               continue;
+            
+            // SANITIZE the value
+            const sanitizedValue = this.sanitizeExcelValue(value);
 
             if (
               mappings.project_name.length > 0 &&
               this.matchColumn(colName, { name: mappings.project_name })
             ) {
-              projectName = String(value);
+              projectName = String(sanitizedValue);
             } else if (
               mappings.project_id.length > 0 &&
               this.matchColumn(colName, { num: mappings.project_id })
             ) {
-              projectIdentifier = String(value);
+              projectIdentifier = String(sanitizedValue);
             } else if (
               mappings.address.length > 0 &&
               this.matchColumn(colName, { addr: mappings.address })
             ) {
-              address = String(value);
+              address = String(sanitizedValue);
             } else if (
               mappings.city.length > 0 &&
               this.matchColumn(colName, { city: mappings.city })
             ) {
-              city = String(value);
+              city = String(sanitizedValue);
             } else if (
               mappings.state.length > 0 &&
               this.matchColumn(colName, { state: mappings.state })
             ) {
-              state = String(value);
+              state = String(sanitizedValue);
             } else if (
               mappings.project_type.length > 0 &&
               this.matchColumn(colName, { type: mappings.project_type })
             ) {
-              projectType = String(value);
+              projectType = String(sanitizedValue);
             } else if (
               mappings.customer_name.length > 0 &&
               this.matchColumn(colName, { cust: mappings.customer_name })
             ) {
-              customerName = String(value);
+              customerName = String(sanitizedValue);
             } else if (
               mappings.contractor_name.length > 0 &&
               this.matchColumn(colName, {
                 contractor: mappings.contractor_name,
               })
             ) {
-              contractorName = String(value);
+              contractorName = String(sanitizedValue);
             } else if (
               mappings.contractor_phone.length > 0 &&
               this.matchColumn(colName, {
                 contractor_phone: mappings.contractor_phone,
               })
             ) {
-              contractorPhone = String(value);
+              contractorPhone = String(sanitizedValue);
             } else if (
               mappings.contractor_company.length > 0 &&
               this.matchColumn(colName, {
                 contractor_company: mappings.contractor_company,
               })
             ) {
-              contractorCompany = String(value);
+              contractorCompany = String(sanitizedValue);
             } else if (
               mappings.job_address.length > 0 &&
               this.matchColumn(colName, { job_addr: mappings.job_address })
             ) {
-              jobAddress = String(value);
+              jobAddress = String(sanitizedValue);
             } else if (
               mappings.job_city.length > 0 &&
               this.matchColumn(colName, { job_city: mappings.job_city })
             ) {
-              jobCity = String(value);
+              jobCity = String(sanitizedValue);
             } else if (
               mappings.job_state.length > 0 &&
               this.matchColumn(colName, { job_state: mappings.job_state })
             ) {
-              jobState = String(value);
+              jobState = String(sanitizedValue);
             }
           }
 
@@ -431,25 +484,28 @@ class ExcelImporter {
               (v) => v && typeof v === "string",
             );
             projectName = firstValue
-              ? String(firstValue).substring(0, 100)
+              ? String(this.sanitizeExcelValue(firstValue)).substring(0, 100)
               : "Unknown Project";
           }
 
           const customFields = this.extractCustomFields(row, rawMappings);
-          const custCountry =
+          const custCountry = this.sanitizeExcelValue(
             row["Customer Country"] ||
             row["Cust_Country"] ||
             row["Country"] ||
-            clientDefaults.cust_country;
-          const jobCountry =
+            clientDefaults.cust_country
+          );
+          const jobCountry = this.sanitizeExcelValue(
             row["Job Country"] ||
             row["Job_Country"] ||
             row["Country"] ||
-            clientDefaults.job_country;
-          const extraInfo = row["Extra Info"] || row["Notes"] || null;
+            clientDefaults.job_country
+          );
+          const extraInfo = this.sanitizeExcelValue(
+            row["Extra Info"] || row["Notes"] || null
+          );
           const uploadDate = new Date().toISOString().split("T")[0];
 
-          // 3. CRITICAL FIX: Use dbClient.query here
           const projectResult = await dbClient.query(
             `INSERT INTO projects (
               client_id, project_name, project_id, customer_name, project_type, 
@@ -493,7 +549,6 @@ class ExcelImporter {
           );
           for (const contact of contacts) {
             contact.client_id = clientId;
-            // 4. CRITICAL FIX: Use dbClient.query here
             const contactResult = await dbClient.query(
               `INSERT INTO contacts (client_id, project_id, contact_name, role, phone, email, is_primary, custom_fields) 
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
@@ -518,7 +573,6 @@ class ExcelImporter {
           );
           for (const stakeholder of stakeholders) {
             stakeholder.client_id = clientId;
-            // 5. CRITICAL FIX: Use dbClient.query here
             const stakeholderResult = await dbClient.query(
               `INSERT INTO stakeholders (client_id, project_id, stakeholder_name, stakeholder_type, company_name, role_on_project, custom_fields) 
                VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
@@ -535,7 +589,6 @@ class ExcelImporter {
             results.stakeholders.push(stakeholderResult.rows[0].id);
           }
 
-          // 6. CRITICAL FIX: Use dbClient.query here
           await dbClient.query("COMMIT");
           results.success++;
 
@@ -543,7 +596,6 @@ class ExcelImporter {
             `✅ Row ${i + 1}: "${projectName}" - ${contacts.length} contacts, ${stakeholders.length} stakeholders`,
           );
         } catch (rowError) {
-          // 7. CRITICAL FIX: Use dbClient.query here
           await dbClient.query("ROLLBACK");
           results.failed++;
           results.errors.push({ row: i + 1, error: rowError.message });
@@ -558,7 +610,7 @@ class ExcelImporter {
     } catch (err) {
       throw err;
     } finally {
-      // 8. CRITICAL FIX: ALWAYS release the connection back to the pool!
+      // ALWAYS release the connection back to the pool
       dbClient.release();
     }
   }
