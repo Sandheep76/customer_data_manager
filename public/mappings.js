@@ -71,7 +71,15 @@ async function loadMappingNamesModal() {
 
   try {
     const response = await fetch(`/api/column-mappings/${currentMappingClientId}/names`);
+    if (!response.ok) {
+      console.error("Failed to load mapping names");
+      return;
+    }
     const mappings = await response.json();
+    if (!Array.isArray(mappings)) {
+      console.error("Invalid response format");
+      return;
+    }
     console.log("Mappings found:", mappings.length);
 
     const container = document.getElementById("mappingBadgesModal");
@@ -287,11 +295,15 @@ async function createNewMappingInline() {
 
   try {
     const checkResponse = await fetch(`/api/column-mappings/${currentMappingClientId}/names`);
-    const existing = await checkResponse.json();
 
-    if (existing.some((m) => m.mapping_name === mappingName)) {
-      if (window.showToast) showToast(`Mapping "${mappingName}" already exists`, "error");
-      return;
+    if (!checkResponse.ok) {
+      console.error("Failed to fetch existing mappings");
+    } else {
+      const existing = await checkResponse.json();
+      if (Array.isArray(existing) && existing.some((m) => m.mapping_name === mappingName)) {
+        if (window.showToast) showToast(`Mapping "${mappingName}" already exists`, "error");
+        return;
+      }
     }
 
     const createResponse = await fetch("/api/column-mappings", {
