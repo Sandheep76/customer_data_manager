@@ -295,15 +295,15 @@ async function createNewMappingInline() {
 
   try {
     const checkResponse = await fetch(`/api/column-mappings/${currentMappingClientId}/names`);
+    let existingMappings = [];
+    if (checkResponse.ok) {
+      const data = await checkResponse.json();
+      if (Array.isArray(data)) existingMappings = data;
+    }
 
-    if (!checkResponse.ok) {
-      console.error("Failed to fetch existing mappings");
-    } else {
-      const existing = await checkResponse.json();
-      if (Array.isArray(existing) && existing.some((m) => m.mapping_name === mappingName)) {
-        if (window.showToast) showToast(`Mapping "${mappingName}" already exists`, "error");
-        return;
-      }
+    if (existingMappings.some((m) => m.mapping_name === mappingName)) {
+      if (window.showToast) showToast(`Mapping "${mappingName}" already exists`, "error");
+      return;
     }
 
     const createResponse = await fetch("/api/column-mappings", {
@@ -319,12 +319,40 @@ async function createNewMappingInline() {
 
     if (createResponse.ok) {
       if (window.showToast) showToast(`Template "${mappingName}" created!`, "success");
+
+      // Hide the inline form
       toggleInlineNewMapping();
+
+      // Set current mapping name
       currentMappingName = mappingName;
+      currentExcelColumns = [];
+      currentMappingsList = [];
 
+      // Refresh the mapping badges
       await loadMappingNamesModal();
-      await selectMappingModal(mappingName);
 
+      // IMPORTANT: Manually show the upload area and hide the no-mapping message
+      const uploadArea = document.getElementById("uploadColumnsAreaModal");
+      const noMappingDiv = document.getElementById("noMappingSelectedModal");
+      const tableContainer = document.getElementById("mappingTableContainerModal");
+      const deleteBtn = document.getElementById("deleteMappingBtnModal");
+      const renameBtn = document.getElementById("renameMappingBtnModal");
+      const exportBtn = document.getElementById("exportTemplateBtnModal");
+
+      if (uploadArea) uploadArea.classList.remove("hidden");
+      if (noMappingDiv) noMappingDiv.style.display = "none";
+      if (tableContainer) tableContainer.classList.add("hidden");
+      if (deleteBtn) deleteBtn.classList.remove("hidden");
+      if (renameBtn) renameBtn.classList.remove("hidden");
+      if (exportBtn) exportBtn.classList.remove("hidden");
+
+      // Show the columns status message
+      const columnsStatus = document.getElementById("columnsStatusModal");
+      if (columnsStatus) {
+        columnsStatus.innerHTML = `<p class="status-info">📋 New template "${escapeHtml(mappingName)}" created. Click "Load Columns" to upload an Excel file and define mappings.</p>`;
+      }
+
+      // Update the active badge to show unsaved
       setTimeout(() => {
         const activeBadge = document.querySelector("#mappingBadgesModal .mapping-badge.active");
         if (activeBadge) {
