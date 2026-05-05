@@ -1,4 +1,4 @@
-/* --- ENHANCED MAPPING UI STYLES --- */
+/* ==================== BASE STYLES ==================== */
 * {
   margin: 0;
   padding: 0;
@@ -35,43 +35,59 @@ h1 {
   font-size: 13px;
 }
 
-/* Utility Classes */
+/* ==================== UTILITY CLASSES ==================== */
 .hidden {
   display: none !important;
 }
-
 .flex {
   display: flex;
 }
-
 .flex-between {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 .flex-wrap {
   flex-wrap: wrap;
 }
+.gap-1 {
+  gap: 4px;
+}
+.gap-2 {
+  gap: 8px;
+}
+.gap-3 {
+  gap: 12px;
+}
+.gap-4 {
+  gap: 16px;
+}
+.align-center {
+  align-items: center;
+}
+.align-end {
+  align-items: flex-end;
+}
+.justify-end {
+  justify-content: flex-end;
+}
+.flex-1 {
+  flex: 1;
+}
+.mb-2 {
+  margin-bottom: 8px;
+}
+.mb-3 {
+  margin-bottom: 15px;
+}
+.mt-2 {
+  margin-top: 8px;
+}
+.full-width {
+  width: 100%;
+}
 
-.gap-1 { gap: 4px; }
-.gap-2 { gap: 8px; }
-.gap-3 { gap: 12px; }
-.gap-4 { gap: 16px; }
-
-.align-center { align-items: center; }
-.align-end { align-items: flex-end; }
-.justify-end { justify-content: flex-end; }
-
-.flex-1 { flex: 1; }
-
-.mb-2 { margin-bottom: 8px; }
-.mb-3 { margin-bottom: 15px; }
-.mt-2 { margin-top: 8px; }
-
-.full-width { width: 100%; }
-
-/* Tabs */
+/* ==================== TABS ==================== */
 .main-tabs {
   display: flex;
   gap: 5px;
@@ -93,11 +109,9 @@ h1 {
   color: #666;
   transition: all 0.3s;
 }
-
 .main-tab:hover {
   color: #1a73e8;
 }
-
 .main-tab.active {
   color: #1a73e8;
   border-bottom: 3px solid #1a73e8;
@@ -106,12 +120,11 @@ h1 {
 .tab-content-panel {
   display: none;
 }
-
 .tab-content-panel.active {
   display: block;
 }
 
-/* Cards */
+/* ==================== CARDS ==================== */
 .card {
   background: white;
   border-radius: 10px;
@@ -120,45 +133,34 @@ h1 {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.card h3 {
-  margin-bottom: 10px;
-  color: #333;
-  font-size: 16px;
-}
-
-/* Tables */
+/* ==================== TABLES ==================== */
 .table-wrapper {
   overflow-x: auto;
 }
-
 .data-table {
   width: 100%;
   border-collapse: collapse;
 }
-
 .data-table th,
 .data-table td {
   padding: 10px;
   text-align: left;
   border-bottom: 1px solid #ddd;
 }
-
 .data-table th {
   background: #e4e7eb;
   font-weight: 600;
   border-bottom: 2px solid #ccc;
 }
-
 .data-table tr:hover {
   background: #eef2f8;
 }
-
 .data-table tbody tr {
   cursor: pointer;
   user-select: none;
 }
 
-/* Buttons */
+/* ==================== BUTTONS ==================== */
 button {
   padding: 8px 12px;
   font-size: 14px;
@@ -166,7 +168,6 @@ button {
   border-radius: 5px;
   cursor: pointer;
 }
-
 button:disabled {
   background-color: #cccccc !important;
   color: #666666 !important;
@@ -176,70 +177,90 @@ button:disabled {
 }
 
 .btn-success {
-  background: #28a745;
+  background: #34a853;
   color: white;
   border: none;
 }
-
 .btn-success:hover {
-  background: #218838;
+  background: #2d8e47;
 }
-
 .btn-danger {
-  background: #dc3545;
+  background: #ea4335;
   color: white;
   border: none;
 }
-
 .btn-danger:hover {
-  background: #c82333;
+  background: #c5221f;
 }
-
 .btn-warning {
-  background: #ffc107;
+  background: #fbbc04;
   color: #333;
   border: none;
 }
-
 .btn-warning:hover {
-  background: #e0a800;
+  background: #e9b002;
 }
-
 .btn-secondary {
-  background: #6c757d;
+  background: #9aa0a6;
   color: white;
   border: none;
 }
-
 .btn-secondary:hover {
-  background: #5a6268;
+  background: #80868b;
 }
-
 .btn-sm {
   padding: 4px 8px;
   font-size: 12px;
 }
+.btn-icon {
+  padding: 6px 10px;
+  font-size: 14px;
+  background: #34a853;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.btn-icon:hover {
+  background: #2d8e47;
+}
+.btn-close {
+  background: #ea4335;
+  color: white;
+  border: none;
+}
+.btn-close:hover {
+  background: #c5221f;
+}
 
-/* Selects */
-select, input, textarea {
+/* Show Active/All buttons - white text for contrast */
+#showActiveClientsBtn,
+#showAllClientsBtn,
+#showActiveAssessTypesBtn,
+#showAllAssessTypesBtn {
+  color: white !important;
+}
+
+/* ==================== FORMS & INPUTS ==================== */
+select,
+input,
+textarea {
   padding: 8px 12px;
   font-size: 14px;
   border: 1px solid #ddd;
   border-radius: 5px;
 }
-
 select {
   width: auto;
   min-width: 180px;
 }
-
 .small-dropdown {
   min-width: 180px !important;
   padding: 8px 12px !important;
   font-size: 14px !important;
 }
 
-/* Badges */
+/* ==================== BADGES ==================== */
 .badge-active {
   background: #28a745;
   color: white;
@@ -249,7 +270,6 @@ select {
   font-weight: 500;
   margin-left: 6px;
 }
-
 .badge-inactive {
   background: #dc3545;
   color: white;
@@ -259,7 +279,6 @@ select {
   font-weight: 500;
   margin-left: 6px;
 }
-
 .badge-default {
   background: #1a73e8;
   color: white;
@@ -269,7 +288,6 @@ select {
   font-weight: 500;
   margin-left: 6px;
 }
-
 .ci-number {
   font-family: monospace;
   font-weight: bold;
@@ -277,7 +295,7 @@ select {
   font-size: 15px;
 }
 
-/* Pagination */
+/* ==================== PAGINATION ==================== */
 .pagination {
   display: flex;
   justify-content: center;
@@ -286,18 +304,15 @@ select {
   margin-top: 15px;
   flex-wrap: wrap;
 }
-
 .pagination button {
   padding: 6px 12px;
   font-size: 13px;
   min-width: 40px;
 }
-
 .pagination button.active {
   background: #1a73e8;
   color: white;
 }
-
 .pagination-info {
   text-align: center;
   margin-top: 10px;
@@ -305,7 +320,7 @@ select {
   color: #666;
 }
 
-/* Modal */
+/* ==================== MODAL ==================== */
 .modal {
   display: none;
   position: fixed;
@@ -324,7 +339,7 @@ select {
   width: 90%;
   max-width: 900px;
   border-radius: 10px;
-  max-height: 85%;
+  max-height: 85vh;
   overflow-y: auto;
 }
 
@@ -335,21 +350,19 @@ select {
   gap: 30px;
   margin-bottom: 15px;
 }
-
 .modal-footer {
-  margin-top: 25px;
+  margin-top: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 18px;
+  padding-top: 12px;
   border-top: 1px solid #eaeaea;
 }
-
-.modal-footer-left, .modal-footer-right {
+.modal-footer-left,
+.modal-footer-right {
   display: flex;
   gap: 12px;
 }
-
 .modal-footer button {
   width: 155px;
   padding: 10px 0;
@@ -357,39 +370,35 @@ select {
   font-weight: 600;
   border-radius: 6px;
 }
-
 .close {
   cursor: pointer;
   font-size: 22px;
 }
 
-/* Forms */
+/* ==================== FORMS ==================== */
 .form-group {
   margin-bottom: 12px;
 }
-
 .form-group label {
   display: block;
   margin-bottom: 4px;
   font-weight: 500;
   font-size: 13px;
 }
-
-.form-group input, .form-group textarea, .form-group select {
+.form-group input,
+.form-group textarea,
+.form-group select {
   width: 100%;
 }
-
 .checkbox-group {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
 .checkbox-group input {
   width: auto;
   cursor: pointer;
 }
-
 .checkbox-group label {
   margin-bottom: 0;
 }
@@ -400,11 +409,9 @@ select {
   gap: 12px 15px;
   align-items: center;
 }
-
 .modal-form-grid .form-group:not(.checkbox-group) {
   display: contents;
 }
-
 .modal-form-grid .form-group.checkbox-group {
   grid-column: 2;
   margin-bottom: 0;
@@ -416,19 +423,17 @@ select {
   cursor: not-allowed;
 }
 
-/* Mapping UI */
+/* ==================== MAPPING UI ==================== */
 .top-controls-flex {
   display: flex;
   justify-content: space-between;
   gap: 15px;
   margin-bottom: 15px;
 }
-
 .top-controls-buttons {
   display: flex;
   gap: 10px;
 }
-
 .inline-new-mapping {
   background: #f8f9fa;
   padding: 15px;
@@ -436,7 +441,6 @@ select {
   border: 1px dashed #1a73e8;
   margin-bottom: 15px;
 }
-
 .tab-row-flex {
   display: flex;
   justify-content: space-between;
@@ -445,7 +449,6 @@ select {
   margin-bottom: 15px;
   gap: 15px;
 }
-
 .mapping-badges-scroll {
   display: flex;
   gap: 5px;
@@ -454,7 +457,6 @@ select {
   margin-bottom: -2px;
   flex: 1;
 }
-
 .mapping-badges-scroll::-webkit-scrollbar {
   display: none;
 }
@@ -471,21 +473,22 @@ select {
   white-space: nowrap;
   transition: all 0.2s;
 }
-
 .mapping-badge:hover {
   background: #eef2f8;
   color: #1a73e8;
 }
-
 .mapping-badge.active {
   background: white;
   color: #1a73e8;
   border-color: #ddd;
   border-bottom-color: white;
 }
-
 .mapping-badge.unsaved {
-  color: #dc3545;
+  color: #dc3545 !important;
+  border-bottom: 2px solid #dc3545;
+}
+.mapping-badge.unsaved:hover {
+  background: #fff0f0;
 }
 
 .mapped-row {
@@ -493,37 +496,39 @@ select {
 }
 
 .mapping-table-wrapper {
-  max-height: 350px;
+  max-height: 450px;
   overflow-y: auto;
   border: 1px solid #ddd;
   border-radius: 6px;
 }
-
 .mapping-table {
   width: 100%;
   border-collapse: collapse;
 }
-
-.mapping-table th, .mapping-table td {
+.mapping-table th,
+.mapping-table td {
   padding: 8px;
   text-align: left;
   border-bottom: 1px solid #eee;
 }
-
 .mapping-table select {
   width: 100%;
   padding: 5px 8px;
 }
-
 .mapping-table thead th {
   position: sticky;
   top: 0;
   background: #f0f2f5;
   z-index: 2;
 }
+.mapping-table th:last-child,
+.mapping-table td:last-child {
+  min-width: 120px;
+  width: 120px;
+}
 
 .smart-match-btn {
-  background: #6f42c1;
+  background: #a142f4;
   color: white;
   font-size: 14px;
   padding: 6px 14px;
@@ -533,9 +538,8 @@ select {
   border: none;
   cursor: pointer;
 }
-
 .smart-match-btn:hover {
-  background: #59339d;
+  background: #8b3ad0;
   transform: translateY(-1px);
 }
 
@@ -544,13 +548,19 @@ select {
   color: #1a73e8;
   font-size: 14px;
 }
-
 .no-mapping-placeholder {
   text-align: center;
   padding: 30px;
   color: #666;
 }
 
+/* Mapping Client Dropdown */
+#mappingClientSelect {
+  min-width: 400px !important;
+  width: auto;
+}
+
+/* ==================== LOGO & IMAGES ==================== */
 .logo-preview {
   width: 120px;
   height: 35px;
@@ -561,7 +571,6 @@ select {
   justify-content: center;
   font-size: 16px;
 }
-
 .logo-upload-section {
   grid-column: 1 / -1;
   display: flex;
@@ -572,27 +581,24 @@ select {
   border-radius: 6px;
   border: 1px solid #eee;
 }
-
 .small-text {
   font-size: 11px;
   color: #666;
   margin-top: 4px;
 }
 
-/* Projects Grid */
+/* ==================== PROJECT GRID ==================== */
 .projects-controls-grid {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 15px 12px;
   margin-bottom: 5px;
 }
-
 .two-col-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-
 .client-selector {
   display: flex;
   gap: 15px;
@@ -600,14 +606,13 @@ select {
   flex-wrap: wrap;
 }
 
-/* Toast */
+/* ==================== TOAST ==================== */
 #toast-container {
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 9999;
 }
-
 @keyframes slideIn {
   from {
     transform: translateX(100%);
@@ -618,7 +623,6 @@ select {
     opacity: 1;
   }
 }
-
 @keyframes slideOut {
   from {
     transform: translateX(0);
@@ -630,6 +634,16 @@ select {
   }
 }
 
-.status-success { color: #28a745; margin-top: 8px; }
-.status-error { color: #dc3545; margin-top: 8px; }
-.status-info { color: #17a2b8; margin-top: 8px; }
+/* ==================== STATUS ==================== */
+.status-success {
+  color: #28a745;
+  margin-top: 8px;
+}
+.status-error {
+  color: #dc3545;
+  margin-top: 8px;
+}
+.status-info {
+  color: #17a2b8;
+  margin-top: 8px;
+}

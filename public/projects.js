@@ -1,4 +1,4 @@
-// Projects Management Module
+// ==================== PROJECTS MANAGEMENT ====================
 
 async function loadClientDropdown() {
   try {
@@ -307,6 +307,7 @@ async function exportProjects() {
   } catch (err) { showToast("Error exporting projects", "error"); }
 }
 
+// Event Listeners
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("showProjectsBtn")?.addEventListener("click", loadProjects);
   document.getElementById("newProjectBtn")?.addEventListener("click", showAddProjectModal);
@@ -322,6 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("manageMappingsBtn")?.addEventListener("click", () => { if (window.openMappingsModal) window.openMappingsModal(); });
 });
 
+// Exports
 window.loadClientDropdown = loadClientDropdown;
 window.loadAssessTypesForProject = loadAssessTypesForProject;
 window.loadProjectMappingTemplates = loadProjectMappingTemplates;

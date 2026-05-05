@@ -1,4 +1,4 @@
-// Clients Management Module
+// ==================== CLIENTS MANAGEMENT ====================
 
 async function loadClientsList(showAll = false) {
   showAllClients = showAll;
@@ -6,13 +6,13 @@ async function loadClientsList(showAll = false) {
   const allBtn = document.getElementById("showAllClientsBtn");
 
   if (showAll) {
-    activeBtn.style.backgroundColor = "#6c757d";
+    activeBtn.style.backgroundColor = "#9aa0a6";
     allBtn.style.backgroundColor = "#1a73e8";
     activeBtn.innerText = "Show Active";
     allBtn.innerText = "✓ Show All";
   } else {
     activeBtn.style.backgroundColor = "#1a73e8";
-    allBtn.style.backgroundColor = "#6c757d";
+    allBtn.style.backgroundColor = "#9aa0a6";
     activeBtn.innerText = "✓ Show Active";
     allBtn.innerText = "Show All";
   }
@@ -27,7 +27,8 @@ async function loadClientsList(showAll = false) {
     renderClientPagination();
   } catch (err) {
     console.error(err);
-    document.getElementById("clientsBody").innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: red;">Error loading clients.</td></tr>';
+    document.getElementById("clientsBody").innerHTML =
+      '<table><td colspan="7" style="text-align: center; padding: 30px; color: red;">Error loading clients.</td></tr>';
   }
 }
 
@@ -43,17 +44,21 @@ function renderClientsPage() {
     return;
   }
 
-  tbody.innerHTML = pageClients.map(client => `
+  tbody.innerHTML = pageClients
+    .map(
+      (client) => `
     <tr ondblclick="editClient(${client.id})" style="cursor: pointer;" title="Double-click to edit">
       <td style="text-align: center;"><input type="checkbox" class="client-select-cb" value="${client.id}" onclick="event.stopPropagation()"></td>
-      <td>${client.client_logo ? `<img src="${client.client_logo}" alt="logo" style="width: 160px; height: 45px; object-fit: contain; border-radius: 6px;">` : '<div class="logo-fallback" style="width:160px;height:45px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>'}</td>
+      <td style="width: 180px;">${client.client_logo ? `<img src="${client.client_logo}" alt="logo" style="width: 160px; height: 45px; object-fit: contain; border-radius: 6px;">` : '<div style="width:160px;height:45px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>'}</td>
       <td class="ci-number">${escapeHtml(client.client_name)}</td>
       <td>${client.is_active ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>'}</td>
       <td>${client.client_abbreviation ? escapeHtml(client.client_abbreviation) : "-"}</td>
       <td>${client.industry || "-"}</td>
       <td style="text-align: right;"></td>
     </tr>
-  `).join("");
+  `,
+    )
+    .join("");
 }
 
 function renderClientPagination() {
@@ -96,11 +101,11 @@ function showAddClientModal() {
   document.getElementById("clientDefaultCustCountry").value = "Canada";
   document.getElementById("clientDefaultJobCountry").value = "Canada";
   document.getElementById("clientIsActive").checked = true;
-  // HIDE duplicate button for Add mode
   document.getElementById("copyClientBtnModal").style.display = "none";
   document.getElementById("logoAction").value = "";
   document.getElementById("editClientLogoFile").value = "";
-  document.getElementById("modalLogoPreview").innerHTML = '<div style="width:120px;height:35px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>';
+  document.getElementById("modalLogoPreview").innerHTML =
+    '<div style="width:120px;height:35px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>';
   document.getElementById("removeLogoBtn").style.display = "none";
   document.getElementById("clientModal").style.display = "block";
 }
@@ -120,15 +125,16 @@ async function editClient(clientId) {
     document.getElementById("clientDefaultCustCountry").value = client.default_cust_country || "Canada";
     document.getElementById("clientDefaultJobCountry").value = client.default_job_country || "Canada";
     document.getElementById("clientIsActive").checked = client.is_active === true;
-    // SHOW duplicate button for Edit mode
     document.getElementById("copyClientBtnModal").style.display = "block";
     document.getElementById("logoAction").value = "";
     document.getElementById("editClientLogoFile").value = "";
     if (client.client_logo) {
-      document.getElementById("modalLogoPreview").innerHTML = `<img src="${client.client_logo}" style="max-width:120px;max-height:35px;border-radius:6px;object-fit:contain;">`;
+      document.getElementById("modalLogoPreview").innerHTML =
+        `<img src="${client.client_logo}" style="max-width:120px;max-height:35px;border-radius:6px;object-fit:contain;">`;
       document.getElementById("removeLogoBtn").style.display = "inline-block";
     } else {
-      document.getElementById("modalLogoPreview").innerHTML = '<div style="width:120px;height:35px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>';
+      document.getElementById("modalLogoPreview").innerHTML =
+        '<div style="width:120px;height:35px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>';
       document.getElementById("removeLogoBtn").style.display = "none";
     }
     document.getElementById("clientModal").style.display = "block";
@@ -150,11 +156,18 @@ async function saveClient() {
     default_job_country: document.getElementById("clientDefaultJobCountry").value,
     is_active: document.getElementById("clientIsActive").checked,
   };
-  if (!clientData.client_name) { showToast("Client Name is required", "error"); return; }
+  if (!clientData.client_name) {
+    showToast("Client Name is required", "error");
+    return;
+  }
   try {
     let response;
     if (clientId) {
-      response = await fetch(`/api/clients/${clientId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clientData) });
+      response = await fetch(`/api/clients/${clientId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(clientData),
+      });
     } else {
       response = await fetch("/api/clients", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clientData) });
     }
@@ -173,7 +186,9 @@ async function saveClient() {
             await fetch(`/api/clients/${finalClientId}/logo`, { method: "POST", body: formData });
           }
         }
-      } catch (e) { console.error("Logo sync failed", e); }
+      } catch (e) {
+        console.error("Logo sync failed", e);
+      }
       showToast(clientId ? "Client updated" : "Client added", "success");
       closeClientModal();
       loadClientsList(showAllClients);
@@ -183,7 +198,9 @@ async function saveClient() {
       const error = await response.json();
       showToast("Error: " + (error.error || "Unknown error"), "error");
     }
-  } catch (err) { showToast("Error saving client: " + err.message, "error"); }
+  } catch (err) {
+    showToast("Error saving client: " + err.message, "error");
+  }
 }
 
 async function saveClientAndAddNext() {
@@ -197,7 +214,8 @@ function previewEditClientLogo(event) {
   if (file) {
     const reader = new FileReader();
     reader.onload = function (e) {
-      document.getElementById("modalLogoPreview").innerHTML = `<img src="${e.target.result}" style="max-width:120px;max-height:35px;border-radius:6px;object-fit:contain;border:2px dashed #1a73e8;padding:2px;">`;
+      document.getElementById("modalLogoPreview").innerHTML =
+        `<img src="${e.target.result}" style="max-width:120px;max-height:35px;border-radius:6px;object-fit:contain;border:2px dashed #1a73e8;padding:2px;">`;
       document.getElementById("logoAction").value = "upload";
       document.getElementById("removeLogoBtn").style.display = "inline-block";
     };
@@ -206,7 +224,8 @@ function previewEditClientLogo(event) {
 }
 
 function markLogoForRemoval() {
-  document.getElementById("modalLogoPreview").innerHTML = '<div style="width:120px;height:35px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>';
+  document.getElementById("modalLogoPreview").innerHTML =
+    '<div style="width:120px;height:35px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>';
   document.getElementById("editClientLogoFile").value = "";
   document.getElementById("logoAction").value = "remove";
   document.getElementById("removeLogoBtn").style.display = "none";
@@ -219,14 +238,21 @@ function closeClientModal() {
 
 async function bulkDeleteClients() {
   const checkboxes = document.querySelectorAll(".client-select-cb:checked");
-  if (checkboxes.length === 0) { showToast("Please select at least one client.", "info"); return; }
+  if (checkboxes.length === 0) {
+    showToast("Please select at least one client.", "info");
+    return;
+  }
   if (!confirm(`Delete ${checkboxes.length} selected client(s)? This will also delete their projects and data.`)) return;
-  let successCount = 0, failCount = 0;
+  let successCount = 0,
+    failCount = 0;
   for (let cb of checkboxes) {
     try {
       const response = await fetch(`/api/clients/${cb.value}`, { method: "DELETE" });
-      if (response.ok) successCount++; else failCount++;
-    } catch (e) { failCount++; }
+      if (response.ok) successCount++;
+      else failCount++;
+    } catch (e) {
+      failCount++;
+    }
   }
   if (failCount > 0) showToast(`Deleted ${successCount} clients, ${failCount} failed.`, "warning");
   else showToast(`Successfully deleted ${successCount} client(s)`, "success");
@@ -240,8 +266,8 @@ function makeCopyClientFromModal() {
   document.getElementById("clientId").value = "";
   const clientName = document.getElementById("clientName").value;
   if (clientName && !clientName.endsWith("_COPY")) document.getElementById("clientName").value = clientName + "_COPY";
-  // Clear logo when duplicating
-  document.getElementById("modalLogoPreview").innerHTML = '<div style="width:120px;height:35px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>';
+  document.getElementById("modalLogoPreview").innerHTML =
+    '<div style="width:120px;height:35px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>';
   document.getElementById("editClientLogoFile").value = "";
   document.getElementById("logoAction").value = "";
   document.getElementById("removeLogoBtn").style.display = "none";
@@ -270,6 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("copyClientBtnModal")?.addEventListener("click", makeCopyClientFromModal);
 });
 
+// Exports
 window.loadClientsList = loadClientsList;
 window.changeClientPage = changeClientPage;
 window.editClient = editClient;
@@ -279,3 +306,6 @@ window.makeCopyClientFromModal = makeCopyClientFromModal;
 window.exportClients = exportClients;
 window.markLogoForRemoval = markLogoForRemoval;
 window.previewEditClientLogo = previewEditClientLogo;
+window.saveClient = saveClient;
+window.saveClientAndAddNext = saveClientAndAddNext;
+window.showAddClientModal = showAddClientModal;

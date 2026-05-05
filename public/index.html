@@ -1,288 +1,402 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Control Hub</title>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>🏛️ Admin Control Hub</h1>
-      <div class="subtitle">Centralized Management for Clients, Assessment Types & Projects</div>
-    </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Control Hub</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🏛️ Admin Control Hub - In Progress - Test</h1>
+        <div class="subtitle">Centralized Management for Clients, Assessment Types, Projects & Surveys</div>
+      </div>
 
-    <div class="main-tabs">
-      <button class="main-tab active" data-tab="clients">🏢 Clients</button>
-      <button class="main-tab" data-tab="assessTypes">📝 Assessment Types</button>
-      <button class="main-tab" data-tab="projects">📋 Projects</button>
-    </div>
+      <div class="main-tabs">
+        <button class="main-tab active" data-tab="clients">🏢 Clients</button>
+        <button class="main-tab" data-tab="assessTypes">📝 Assessment Types</button>
+        <button class="main-tab" data-tab="projects">📋 Projects</button>
+        <button class="main-tab" data-tab="surveys">📊 Surveys</button>
+      </div>
 
-    <!-- CLIENTS TAB -->
-    <div id="clientsTab" class="tab-content-panel active">
-      <div class="card">
-        <div class="flex-between mb-3">
-          <div class="flex gap-2">
-            <button id="showActiveClientsBtn">Show Active</button>
-            <button id="showAllClientsBtn" class="btn-secondary">Show All</button>
+      <!-- CLIENTS TAB -->
+      <div id="clientsTab" class="tab-content-panel active">
+        <div class="card">
+          <div class="flex-between mb-3">
+            <div class="flex gap-2">
+              <button id="showActiveClientsBtn">Show Active</button>
+              <button id="showAllClientsBtn" class="btn-secondary">Show All</button>
+            </div>
+            <button id="addClientBtn" class="btn-success">+ Add New Client</button>
           </div>
-          <button id="addClientBtn" class="btn-success">+ Add New Client</button>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center"><input type="checkbox" id="selectAllClients" /></th>
+                  <th style="width: 180px">Logo</th>
+                  <th>Client Name</th>
+                  <th>Status</th>
+                  <th>Abbreviation</th>
+                  <th>Industry</th>
+                  <th style="text-align: right; width: 100px">
+                    <div class="flex gap-2 justify-end">
+                      <button id="bulkDeleteClientsBtn" class="btn-danger" title="Delete Selected Clients">🗑️</button>
+                      <button id="exportClientsBtn" class="btn-success" title="Export Client List">📊</button>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="clientsBody"></tbody>
+            </table>
+          </div>
+          <div id="clientPaginationControls" class="pagination hidden"></div>
+          <div id="clientPaginationInfo" class="pagination-info hidden"></div>
         </div>
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width:40px; text-align:center"><input type="checkbox" id="selectAllClients"></th>
-                <th style="width:180px">Logo</th><th>Client Name</th><th>Status</th><th>Abbreviation</th><th>Industry</th>
-                <th style="text-align:right; width:100px">
-                  <div class="flex gap-2 justify-end">
-                    <button id="bulkDeleteClientsBtn" class="btn-danger" title="Delete Selected Clients">🗑️</button>
-                    <button id="exportClientsBtn" class="btn-success" title="Export Client List">📊</button>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody id="clientsBody"></tbody>
-          </table>
+      </div>
+
+      <!-- ASSESSMENT TYPES TAB -->
+      <div id="assessTypesTab" class="tab-content-panel">
+        <div class="card">
+          <div class="client-selector mb-3">
+            <select id="assessTypeClientSelect">
+              <option value="all">-- All Clients --</option>
+            </select>
+          </div>
+          <div class="flex-between mb-3">
+            <div class="flex gap-2">
+              <button id="showActiveAssessTypesBtn">Show Active</button>
+              <button id="showAllAssessTypesBtn" class="btn-secondary">Show All</button>
+            </div>
+            <button id="addAssessTypeBtn" class="btn-success">+ Add New</button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center"><input type="checkbox" id="selectAllAssessTypes" /></th>
+                  <th>Assess Code</th>
+                  <th>Status</th>
+                  <th>Client</th>
+                  <th>Full Name</th>
+                  <th>Version</th>
+                  <th style="text-align: right; width: 100px">
+                    <div class="flex gap-2 justify-end">
+                      <button id="bulkDeleteAssessTypesBtn" class="btn-danger" title="Delete Selected">🗑️</button>
+                      <button id="exportAssessTypesBtn" class="btn-success" title="Export">📊</button>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="assessTypesBody"></tbody>
+            </table>
+          </div>
+          <div id="assessPaginationControls" class="pagination hidden"></div>
+          <div id="assessPaginationInfo" class="pagination-info hidden"></div>
         </div>
-        <div id="clientPaginationControls" class="pagination hidden"></div>
-        <div id="clientPaginationInfo" class="pagination-info hidden"></div>
+      </div>
+
+      <!-- PROJECTS TAB -->
+      <div id="projectsTab" class="tab-content-panel">
+        <div class="card">
+          <div class="projects-controls-grid">
+            <select id="clientSelect" class="full-width">
+              <option value="">-- Select a Client --</option>
+            </select>
+            <div class="two-col-grid">
+              <button id="showProjectsBtn" disabled>📋 Show Existing Projects</button>
+              <button id="newProjectBtn" class="btn-success" disabled>Add New Project</button>
+            </div>
+            <div class="two-col-grid">
+              <select id="assessTypeSelect" class="small-dropdown" disabled>
+                <option value="">-- Assess Type (Auto) --</option>
+              </select>
+              <select id="mappingTemplateSelect" class="small-dropdown">
+                <option value="">-- Mapping Template --</option>
+              </select>
+            </div>
+            <div class="two-col-grid">
+              <button id="uploadExcelBtn" disabled>📁 Load Projects from Excel</button>
+              <button id="manageMappingsBtn" class="btn-warning">🔧 Manage Mappings</button>
+            </div>
+          </div>
+          <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden" />
+          <div id="uploadStatus" class="mt-2"></div>
+        </div>
+
+        <div id="projectsListContainer" class="card hidden">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center"><input type="checkbox" id="selectAllProjects" /></th>
+                  <th>CI #</th>
+                  <th>Customer/Company Name</th>
+                  <th>Assess Type</th>
+                  <th>Country</th>
+                  <th>Stage</th>
+                  <th>Created</th>
+                  <th style="text-align: right; width: 100px">
+                    <div class="flex gap-2 justify-end">
+                      <button id="bulkDeleteProjectsBtn" class="btn-danger" title="Delete Selected">🗑️</button>
+                      <button id="exportProjectsBtn" class="btn-success" title="Export Projects">📊</button>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="projectsBody"></tbody>
+            </table>
+          </div>
+          <div id="paginationControls" class="pagination hidden"></div>
+          <div id="paginationInfo" class="pagination-info hidden"></div>
+        </div>
       </div>
     </div>
 
-    <!-- ASSESSMENT TYPES TAB -->
-    <div id="assessTypesTab" class="tab-content-panel">
-      <div class="card">
-        <div class="client-selector mb-3">
-          <select id="assessTypeClientSelect"><option value="all">-- All Clients --</option></select>
+    <!-- MAPPINGS MODAL -->
+    <div id="mappingsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Manage Field Mappings</h3>
+          <span class="close" data-modal="mappingsModal">&times;</span>
         </div>
-        <div class="flex-between mb-3">
-          <div class="flex gap-2">
-            <button id="showActiveAssessTypesBtn">Show Active</button>
-            <button id="showAllAssessTypesBtn" class="btn-secondary">Show All</button>
-          </div>
-          <button id="addAssessTypeBtn" class="btn-success">+ Add New</button>
-        </div>
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width:40px; text-align:center"><input type="checkbox" id="selectAllAssessTypes"></th>
-                <th>Assess Code</th><th>Status</th><th>Client</th><th>Full Name</th><th>Version</th>
-                <th style="text-align:right; width:100px">
-                  <div class="flex gap-2 justify-end">
-                    <button id="bulkDeleteAssessTypesBtn" class="btn-danger" title="Delete Selected">🗑️</button>
-                    <button id="exportAssessTypesBtn" class="btn-success" title="Export">📊</button>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody id="assessTypesBody"></tbody>
-          </table>
-        </div>
-        <div id="assessPaginationControls" class="pagination hidden"></div>
-        <div id="assessPaginationInfo" class="pagination-info hidden"></div>
-      </div>
-    </div>
-
-    <!-- PROJECTS TAB -->
-    <div id="projectsTab" class="tab-content-panel">
-      <div class="card">
-        <div class="projects-controls-grid">
-          <select id="clientSelect" class="full-width"><option value="">-- Select a Client --</option></select>
-          <div class="two-col-grid">
-            <button id="showProjectsBtn" disabled>📋 Show Existing Projects</button>
-            <button id="newProjectBtn" class="btn-success" disabled>Add New Project</button>
-          </div>
-          <div class="two-col-grid">
-            <select id="assessTypeSelect" class="small-dropdown" disabled><option value="">-- Assess Type (Auto) --</option></select>
-            <select id="mappingTemplateSelect" class="small-dropdown"><option value="">-- Mapping Template --</option></select>
-          </div>
-          <div class="two-col-grid">
-            <button id="uploadExcelBtn" disabled>📁 Load Projects from Excel</button>
-            <button id="manageMappingsBtn" class="btn-warning">🔧 Manage Mappings</button>
-          </div>
-        </div>
-        <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden">
-        <div id="uploadStatus" class="mt-2"></div>
-      </div>
-
-      <div id="projectsListContainer" class="card hidden">
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width:40px; text-align:center"><input type="checkbox" id="selectAllProjects"></th>
-                <th>CI #</th><th>Customer/Company Name</th><th>Assess Type</th><th>Country</th><th>Stage</th><th>Created</th>
-                <th style="text-align:right; width:100px">
-                  <div class="flex gap-2 justify-end">
-                    <button id="bulkDeleteProjectsBtn" class="btn-danger" title="Delete Selected">🗑️</button>
-                    <button id="exportProjectsBtn" class="btn-success" title="Export Projects">📊</button>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody id="projectsBody"></tbody>
-          </table>
-        </div>
-        <div id="paginationControls" class="pagination hidden"></div>
-        <div id="paginationInfo" class="pagination-info hidden"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAPPINGS MODAL -->
-  <div id="mappingsModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header"><h3>Manage Field Mappings</h3><span class="close" data-modal="mappingsModal">&times;</span></div>
-      <div class="top-controls-flex">
-        <select id="mappingClientSelect" class="small-dropdown"><option value="">-- Select a Client --</option></select>
-        <div class="top-controls-buttons"><button id="toggleInlineNewMappingBtn" class="btn-success" style="width:175px">New Mapping</button></div>
-      </div>
-      <div id="inlineNewMappingSection" class="inline-new-mapping hidden">
-        <div class="flex gap-2 align-end flex-wrap">
-          <div class="form-group flex-1"><label>Mapping Name</label><input type="text" id="newMappingNameInline" placeholder="e.g., FieldMap-AF"></div>
-          <button id="createMappingInlineBtn" style="height:35px; width:175px">Create Template</button>
-          <button id="cancelInlineMappingBtn" class="btn-secondary" style="height:35px; width:175px">Cancel</button>
-        </div>
-      </div>
-      <div id="mappingSelectorModal" class="tab-row-flex hidden">
-        <div class="flex align-end gap-3"><div id="mappingBadgesModal" class="mapping-badges-scroll"></div><div class="mapping-actions"><button id="renameMappingBtnModal" class="btn-warning hidden" title="Rename">✏️</button><button id="deleteMappingBtnModal" class="btn-danger hidden" title="Delete">🗑️</button></div></div>
-        <div id="uploadColumnsAreaModal" class="hidden"><input type="file" id="mappingExcelFileModal" accept=".xlsx,.xls" class="hidden"><button id="loadExcelBtnModal" style="width:175px">📂 Load Data</button></div>
-      </div>
-      <div id="mappingTableContainerModal" class="hidden">
-        <div class="flex-between mb-2"><div class="flex gap-3"><button id="smartMatchBtn" class="smart-match-btn">✨ Smart Match</button><div id="columnsStatusModal"></div></div><div class="flex gap-3 align-center"><span id="mappingProgressText" class="mapping-progress">Mapped: 0 / 0</span><button id="ignoreUnmappedBtn" class="btn-secondary">Ignore Unmapped</button></div></div>
-        <div class="mapping-table-wrapper"><table class="mapping-table" id="mappingTableModal"><thead><tr><th>Column Title</th><th>Sample Data</th><th style="width:40px;text-align:center"></th><th>Map to System Field</th><th>Action</th></tr></thead><tbody id="mappingTableBodyModal"></tbody></table></div>
-        <div class="modal-footer"><div class="modal-footer-left"><button id="saveMappingBtn" class="btn-success" disabled>Save Mapping</button><button id="cancelMappingBtn" class="btn-secondary">Cancel</button></div><div class="modal-footer-right"><button id="exportTemplateBtnModal" class="btn-success hidden">📊 Export</button></div></div>
-      </div>
-      <div id="noMappingSelectedModal" class="no-mapping-placeholder">Select a client to view or create mapping templates</div>
-    </div>
-  </div>
-
-  <!-- CLIENT MODAL -->
-  <div id="clientModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="clientModalTitle">Add Client</h2>
-        <span class="close" data-modal="clientModal">&times;</span>
-      </div>
-      <form id="clientForm" class="modal-form-grid">
-        <input type="hidden" id="clientId">
-        <div class="logo-upload-section">
-          <div id="modalLogoPreview" class="logo-preview">🏢</div>
-          <div>
-            <input type="file" id="editClientLogoFile" accept="image/*" class="hidden">
-            <button type="button" id="uploadLogoBtn" class="btn-sm btn-secondary">📁 Add New Logo</button>
-            <button type="button" id="removeLogoBtn" class="btn-sm btn-danger" style="display: none;">🗑️ Remove Logo</button>
-            <input type="hidden" id="logoAction" value="">
-            <div class="small-text">Max 5MB. Will be saved when you submit form.</div>
+        <div class="top-controls-flex">
+          <select id="mappingClientSelect" class="small-dropdown" style="min-width: 400px">
+            <option value="">-- Select a Client --</option>
+          </select>
+          <div class="top-controls-buttons">
+            <button id="toggleInlineNewMappingBtn" class="btn-success" style="width: 175px" disabled>New Mapping</button>
           </div>
         </div>
-        <div class="form-group"><label>Client Name *</label><input type="text" id="clientName" required></div>
-        <div class="form-group"><label>Client Abbreviation</label><input type="text" id="clientAbbreviation" placeholder="e.g., KMR, SDSU"></div>
-        <div class="form-group"><label>Industry</label><input type="text" id="clientIndustry" placeholder="e.g., Interior Design & Remodeling"></div>
-        <div class="form-group"><label>Contact Person</label><input type="text" id="clientContactPerson"></div>
-        <div class="form-group"><label>Contact Email</label><input type="email" id="clientContactEmail"></div>
-        <div class="form-group"><label>Contact Phone</label><input type="text" id="clientContactPhone"></div>
-        <div class="form-group"><label>Default Customer Country</label><input type="text" id="clientDefaultCustCountry" value="Canada"></div>
-        <div class="form-group"><label>Default Job Country</label><input type="text" id="clientDefaultJobCountry" value="Canada"></div>
-        <div class="form-group checkbox-group"><input type="checkbox" id="clientIsActive" checked><label>Active</label></div>
-      </form>
-      <div class="modal-footer">
-        <div class="modal-footer-left">
-          <button id="saveClientBtn" class="btn-success">Save & Close</button>
-          <button id="closeClientBtn" class="btn-secondary">Cancel</button>
+        <div id="inlineNewMappingSection" class="inline-new-mapping hidden">
+          <div class="flex gap-2 align-end flex-wrap">
+            <div class="form-group flex-1">
+              <label>Mapping Name</label><input type="text" id="newMappingNameInline" placeholder="e.g., FieldMap-AF" />
+            </div>
+            <button id="createMappingInlineBtn" style="height: 35px; width: 175px">Create Template</button>
+            <button id="cancelInlineMappingBtn" class="btn-secondary" style="height: 35px; width: 175px">Cancel</button>
+          </div>
         </div>
-        <div class="modal-footer-right">
-          <button id="copyClientBtnModal" class="btn-warning">Duplicate</button>
-          <button id="saveClientAndAddNextBtn" class="btn-success">Save & Add Another</button>
+        <div id="mappingSelectorModal" class="tab-row-flex hidden">
+          <div class="flex align-end gap-3">
+            <div id="mappingBadgesModal" class="mapping-badges-scroll"></div>
+            <div class="mapping-actions">
+              <button id="renameMappingBtnModal" class="btn-warning hidden" title="Rename">✏️</button>
+              <button id="deleteMappingBtnModal" class="btn-danger hidden" title="Delete">🗑️</button>
+            </div>
+          </div>
+          <div id="uploadColumnsAreaModal" class="hidden">
+            <input type="file" id="mappingExcelFileModal" accept=".xlsx,.xls" class="hidden" />
+            <button id="loadExcelBtnModal" style="width: 175px">📂 Load Columns</button>
+          </div>
+        </div>
+        <div id="mappingTableContainerModal" class="hidden">
+          <div class="flex-between mb-2">
+            <div class="flex gap-3">
+              <button id="smartMatchBtn" class="smart-match-btn">✨ Smart Match</button>
+              <div id="columnsStatusModal"></div>
+            </div>
+            <div class="flex gap-3 align-center">
+              <span id="mappingProgressText" class="mapping-progress">Mapped: 0 / 0</span>
+              <button id="ignoreUnmappedBtn" class="btn-secondary">Ignore Unmapped</button>
+            </div>
+          </div>
+          <div class="mapping-table-wrapper">
+            <table class="mapping-table" id="mappingTableModal">
+              <thead>
+                <tr>
+                  <th>Column Title</th>
+                  <th>Sample Data</th>
+                  <th style="width: 40px; text-align: center"></th>
+                  <th>Map to System Field</th>
+                  <th style="width: 150px">
+                    Action
+                    <button id="exportTemplateBtnModal" class="btn-icon" title="Export Mapping" style="margin-left: 8px">📊</button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="mappingTableBodyModal"></tbody>
+            </table>
+          </div>
+          <div class="modal-footer">
+            <div class="modal-footer-left">
+              <button id="saveMappingBtn" class="btn-success" disabled>Save Mapping</button>
+            </div>
+            <div class="modal-footer-right">
+              <button id="cancelMappingBtn" class="btn-secondary">Cancel</button>
+              <button id="closeMappingModalBtn" class="btn-close">Close</button>
+            </div>
+          </div>
+        </div>
+        <div id="noMappingSelectedModal" class="no-mapping-placeholder">Select a client to view or create mapping templates</div>
+      </div>
+    </div>
+
+    <!-- CLIENT MODAL -->
+    <div id="clientModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="clientModalTitle">Add Client</h2>
+          <span class="close" data-modal="clientModal">&times;</span>
+        </div>
+        <form id="clientForm" class="modal-form-grid">
+          <input type="hidden" id="clientId" />
+          <div class="logo-upload-section">
+            <div id="modalLogoPreview" class="logo-preview">🏢</div>
+            <div>
+              <input type="file" id="editClientLogoFile" accept="image/*" class="hidden" />
+              <button type="button" id="uploadLogoBtn" class="btn-sm btn-secondary">📁 Add New Logo</button>
+              <button type="button" id="removeLogoBtn" class="btn-sm btn-danger" style="display: none">🗑️ Remove Logo</button>
+              <input type="hidden" id="logoAction" value="" />
+              <div class="small-text">Max 5MB. Will be saved when you submit form.</div>
+            </div>
+          </div>
+          <div class="form-group"><label>Client Name *</label><input type="text" id="clientName" required /></div>
+          <div class="form-group"><label>Client Abbreviation</label><input type="text" id="clientAbbreviation" placeholder="e.g., KMR, SDSU" /></div>
+          <div class="form-group">
+            <label>Industry</label><input type="text" id="clientIndustry" placeholder="e.g., Interior Design & Remodeling" />
+          </div>
+          <div class="form-group"><label>Contact Person</label><input type="text" id="clientContactPerson" /></div>
+          <div class="form-group"><label>Contact Email</label><input type="email" id="clientContactEmail" /></div>
+          <div class="form-group"><label>Contact Phone</label><input type="text" id="clientContactPhone" /></div>
+          <div class="form-group"><label>Default Customer Country</label><input type="text" id="clientDefaultCustCountry" value="Canada" /></div>
+          <div class="form-group"><label>Default Job Country</label><input type="text" id="clientDefaultJobCountry" value="Canada" /></div>
+          <div class="form-group checkbox-group"><input type="checkbox" id="clientIsActive" checked /><label>Active</label></div>
+        </form>
+        <div class="modal-footer">
+          <div class="modal-footer-left">
+            <button id="saveClientBtn" class="btn-success">Save & Close</button>
+            <button id="closeClientBtn" class="btn-secondary">Cancel</button>
+          </div>
+          <div class="modal-footer-right">
+            <button id="copyClientBtnModal" class="btn-warning">Duplicate</button>
+            <button id="saveClientAndAddNextBtn" class="btn-success">Save & Add Another</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ASSESS TYPE MODAL -->
-  <div id="assessTypeModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="assessTypeModalTitle">Add Assessment Type</h2>
-        <span class="close" data-modal="assessTypeModal">&times;</span>
-      </div>
-      <form id="assessTypeForm" class="modal-form-grid">
-        <input type="hidden" id="assessTypeId">
-        <div class="form-group"><label>Client</label><select id="assessTypeClientSelectModal" required><option value="">-- Select a Client --</option></select></div>
-        <div class="form-group"><label>Assessment Type *</label><input type="text" id="assessTypeCode" required placeholder="e.g., AF-REM1, LG-RET2"></div>
-        <div class="form-group"><label>Full Name</label><input type="text" id="assessFullName" placeholder="e.g., Architectural Frame - Remodel"></div>
-        <div class="form-group"><label>Name on Report</label><input type="text" id="nameOnReport" placeholder="e.g., Client Satisfaction - Retail"></div>
-        <div class="form-group"><label>Version</label><input type="number" id="assessTypeVersion" value="1" min="1"></div>
-        <div class="form-group"><label>Description</label><textarea id="assessTypeDescription" rows="2" placeholder="Describe what this assessment type is for"></textarea></div>
-        <div class="form-group checkbox-group"><input type="checkbox" id="assessTypeIsDefault"><label>Set as Default for this Client</label></div>
-        <div class="form-group checkbox-group"><input type="checkbox" id="assessTypeIsActive" checked><label>Active</label></div>
-      </form>
-      <div class="modal-footer">
-        <div class="modal-footer-left">
-          <button id="saveAssessTypeBtn" class="btn-success">Save & Close</button>
-          <button id="closeAssessTypeBtn" class="btn-secondary">Cancel</button>
+    <!-- ASSESS TYPE MODAL -->
+    <div id="assessTypeModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="assessTypeModalTitle">Add Assessment Type</h2>
+          <span class="close" data-modal="assessTypeModal">&times;</span>
         </div>
-        <div class="modal-footer-right">
-          <button id="copyAssessBtnModal" class="btn-warning">Duplicate</button>
-          <button id="saveAssessAndAddNextBtn" class="btn-success">Save & Add Another</button>
+        <form id="assessTypeForm" class="modal-form-grid">
+          <input type="hidden" id="assessTypeId" />
+          <div class="form-group">
+            <label>Client</label
+            ><select id="assessTypeClientSelectModal" required>
+              <option value="">-- Select a Client --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Assessment Type *</label><input type="text" id="assessTypeCode" required placeholder="e.g., AF-REM1, LG-RET2" />
+          </div>
+          <div class="form-group">
+            <label>Full Name</label><input type="text" id="assessFullName" placeholder="e.g., Architectural Frame - Remodel" />
+          </div>
+          <div class="form-group">
+            <label>Name on Report</label><input type="text" id="nameOnReport" placeholder="e.g., Client Satisfaction - Retail" />
+          </div>
+          <div class="form-group"><label>Version</label><input type="number" id="assessTypeVersion" value="1" min="1" /></div>
+          <div class="form-group">
+            <label>Description</label
+            ><textarea id="assessTypeDescription" rows="2" placeholder="Describe what this assessment type is for"></textarea>
+          </div>
+          <div class="form-group checkbox-group"><input type="checkbox" id="assessTypeIsDefault" /><label>Set as Default for this Client</label></div>
+          <div class="form-group checkbox-group"><input type="checkbox" id="assessTypeIsActive" checked /><label>Active</label></div>
+        </form>
+        <div class="modal-footer">
+          <div class="modal-footer-left">
+            <button id="saveAssessTypeBtn" class="btn-success">Save & Close</button>
+            <button id="closeAssessTypeBtn" class="btn-secondary">Cancel</button>
+          </div>
+          <div class="modal-footer-right">
+            <button id="copyAssessBtnModal" class="btn-warning">Duplicate</button>
+            <button id="saveAssessAndAddNextBtn" class="btn-success">Save & Add Another</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- PROJECT MODAL -->
-  <div id="projectModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="projectModalTitle">Add / Edit Project</h2>
-        <span class="close" data-modal="projectModal">&times;</span>
-      </div>
-      <form id="projectForm" class="modal-form-grid scrollable">
-        <input type="hidden" id="projectId">
-        <div class="form-group"><label>CI Number</label><input type="text" id="projectCiNumber" class="readonly-field" readonly></div>
-        <div class="form-group"><label>Assessment Type *</label><select id="projectAssessType" required><option value="">-- Select Assessment Type --</option></select></div>
-        <div class="form-group"><label>Customer/Company Name *</label><input type="text" id="customerName" required placeholder="Customer or company name"></div>
-        <div class="form-group"><label>Project Name</label><input type="text" id="projectName" placeholder="Optional project name"></div>
-        <div class="form-group"><label>Project Number</label><input type="text" id="projectNumber" placeholder="Client's project ID"></div>
-        <div class="form-group"><label>Project Type</label><input type="text" id="projectType" placeholder="e.g., Kitchen Reno, Commercial Build"></div>
-        <div class="form-group"><label>Stage</label><select id="projectStage"><option value="">Select</option><option value="Planning">Planning</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option></select></div>
-        <div class="form-group"><label>Address</label><textarea id="projectAddress" placeholder="Customer address"></textarea></div>
-        <div class="form-group"><label>City</label><input type="text" id="projectCity"></div>
-        <div class="form-group"><label>State</label><input type="text" id="projectState"></div>
-        <div class="form-group"><label>Customer Country</label><input type="text" id="projectCustCountry" value="Canada"></div>
-        <div class="form-group"><label>Job Address</label><textarea id="jobAddress" placeholder="Job site address (if different)"></textarea></div>
-        <div class="form-group"><label>Job City</label><input type="text" id="jobCity"></div>
-        <div class="form-group"><label>Job State</label><input type="text" id="jobState"></div>
-        <div class="form-group"><label>Job Country</label><input type="text" id="projectJobCountry" value="Canada"></div>
-        <div class="form-group"><label>Contractor Name</label><input type="text" id="contractorName"></div>
-        <div class="form-group"><label>Contractor Phone</label><input type="text" id="contractorPhone"></div>
-        <div class="form-group"><label>Contractor Company</label><input type="text" id="contractorCompany"></div>
-        <div class="form-group"><label>Extra Info</label><textarea id="projectExtraInfo" rows="2" placeholder="Additional information from client"></textarea></div>
-        <div class="form-group"><label>CI Note (Internal)</label><textarea id="projectCiNote" rows="2" placeholder="Internal notes about this project"></textarea></div>
-        <div class="form-group"><label>Upload Date</label><input type="date" id="uploadDate"></div>
-      </form>
-      <div class="modal-footer">
-        <div class="modal-footer-left">
-          <button id="saveProjectBtn" class="btn-success">Save & Close</button>
-          <button id="closeProjectBtn" class="btn-secondary">Cancel</button>
+    <!-- PROJECT MODAL -->
+    <div id="projectModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="projectModalTitle">Add / Edit Project</h2>
+          <span class="close" data-modal="projectModal">&times;</span>
         </div>
-        <div class="modal-footer-right">
-          <button id="copyProjectBtnModal" class="btn-warning">Duplicate</button>
-          <button id="saveProjectAndAddNextBtn" class="btn-success">Save & Add Another</button>
+        <form id="projectForm" class="modal-form-grid scrollable">
+          <input type="hidden" id="projectId" />
+          <div class="form-group"><label>CI Number</label><input type="text" id="projectCiNumber" class="readonly-field" readonly /></div>
+          <div class="form-group">
+            <label>Assessment Type *</label
+            ><select id="projectAssessType" required>
+              <option value="">-- Select Assessment Type --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Customer/Company Name *</label><input type="text" id="customerName" required placeholder="Customer or company name" />
+          </div>
+          <div class="form-group"><label>Project Name</label><input type="text" id="projectName" placeholder="Optional project name" /></div>
+          <div class="form-group"><label>Project Number</label><input type="text" id="projectNumber" placeholder="Client's project ID" /></div>
+          <div class="form-group">
+            <label>Project Type</label><input type="text" id="projectType" placeholder="e.g., Kitchen Reno, Commercial Build" />
+          </div>
+          <div class="form-group">
+            <label>Stage</label
+            ><select id="projectStage">
+              <option value="">Select</option>
+              <option value="Planning">Planning</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Address</label><textarea id="projectAddress" placeholder="Customer address"></textarea></div>
+          <div class="form-group"><label>City</label><input type="text" id="projectCity" /></div>
+          <div class="form-group"><label>State</label><input type="text" id="projectState" /></div>
+          <div class="form-group"><label>Customer Country</label><input type="text" id="projectCustCountry" value="Canada" /></div>
+          <div class="form-group"><label>Job Address</label><textarea id="jobAddress" placeholder="Job site address (if different)"></textarea></div>
+          <div class="form-group"><label>Job City</label><input type="text" id="jobCity" /></div>
+          <div class="form-group"><label>Job State</label><input type="text" id="jobState" /></div>
+          <div class="form-group"><label>Job Country</label><input type="text" id="projectJobCountry" value="Canada" /></div>
+          <div class="form-group"><label>Contractor Name</label><input type="text" id="contractorName" /></div>
+          <div class="form-group"><label>Contractor Phone</label><input type="text" id="contractorPhone" /></div>
+          <div class="form-group"><label>Contractor Company</label><input type="text" id="contractorCompany" /></div>
+          <div class="form-group">
+            <label>Extra Info</label><textarea id="projectExtraInfo" rows="2" placeholder="Additional information from client"></textarea>
+          </div>
+          <div class="form-group">
+            <label>CI Note (Internal)</label><textarea id="projectCiNote" rows="2" placeholder="Internal notes about this project"></textarea>
+          </div>
+          <div class="form-group"><label>Upload Date</label><input type="date" id="uploadDate" /></div>
+        </form>
+        <div class="modal-footer">
+          <div class="modal-footer-left">
+            <button id="saveProjectBtn" class="btn-success">Save & Close</button>
+            <button id="closeProjectBtn" class="btn-secondary">Cancel</button>
+          </div>
+          <div class="modal-footer-right">
+            <button id="copyProjectBtnModal" class="btn-warning">Duplicate</button>
+            <button id="saveProjectAndAddNextBtn" class="btn-success">Save & Add Another</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <script src="main.js"></script>
-  <script src="clients.js"></script>
-  <script src="assessments.js"></script>
-  <script src="projects.js"></script>
-  <script src="mappings.js"></script>
-  <script>document.addEventListener('DOMContentLoaded', () => { if (window.initApp) window.initApp(); });</script>
-</body>
+    <script src="main.js"></script>
+    <script src="clients.js"></script>
+    <script src="assessments.js"></script>
+    <script src="projects.js"></script>
+    <script src="mappings.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (window.initApp) window.initApp();
+      });
+    </script>
+  </body>
 </html>

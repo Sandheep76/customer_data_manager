@@ -1,31 +1,28 @@
-// Global State Variables
+// ==================== GLOBAL STATE VARIABLES ====================
 let currentClientId = null;
 let showAllClients = false;
 let showAllAssessTypes = false;
 let currentAssessTypeClientId = null;
-let currentMappingClientId = null;
-let currentMappingName = null;
-let mappingDefinitions = [];
-let currentExcelColumns = [];
-let currentMappingsList = [];
-let isEditMode = false;
-let currentSampleData = {};
-
 let statusTimeout = null;
 let allProjects = [];
 let currentPage = 1;
 let itemsPerPage = 10;
 let totalPages = 1;
-
 let allClientsData = [];
 let currentClientPage = 1;
 let totalClientPages = 1;
-
 let allAssessTypesData = [];
 let currentAssessPage = 1;
 let totalAssessPages = 1;
+let mappingDefinitions = [];
+let currentMappingClientId = null;
+let currentMappingName = null;
+let currentExcelColumns = [];
+let currentMappingsList = [];
+let currentSampleData = {};
+let isEditMode = false;
 
-// Auto-mapping Dictionary
+// ==================== AUTO-MAPPING DICTIONARY ====================
 const REQUIRED_FIELDS = ["customer_name"];
 const AUTO_MAP_DICT = {
   "project name": "project_name",
@@ -51,7 +48,7 @@ const AUTO_MAP_DICT = {
   assessment: "assess_type",
 };
 
-// Utility Functions
+// ==================== UTILITY FUNCTIONS ====================
 function escapeHtml(text) {
   if (!text) return "";
   const div = document.createElement("div");
@@ -97,19 +94,6 @@ function clearStatusMessage(elementId) {
   }, 5000);
 }
 
-async function openMappingsModal() {
-  // Sync mapping client dropdown to the one selected in the Projects tab
-  if (currentClientId) {
-    currentMappingClientId = currentClientId;
-  }
-  document.getElementById("mappingsModal").style.display = "block";
-  if (window.loadMappingClientDropdownModal) {
-    window.loadMappingClientDropdownModal();
-  } else {
-    console.error("loadMappingClientDropdownModal is not defined");
-  }
-}
-
 function attemptAutoMap(excelCol) {
   const cleanCol = excelCol.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
   if (AUTO_MAP_DICT[cleanCol]) return AUTO_MAP_DICT[cleanCol];
@@ -121,8 +105,8 @@ function attemptAutoMap(excelCol) {
 
 function switchMainTab(tab) {
   const tabs = document.querySelectorAll(".main-tab");
-  tabs.forEach(btn => btn.classList.remove("active"));
-  document.querySelectorAll(".tab-content-panel").forEach(panel => panel.classList.remove("active"));
+  tabs.forEach((btn) => btn.classList.remove("active"));
+  document.querySelectorAll(".tab-content-panel").forEach((panel) => panel.classList.remove("active"));
 
   if (tab === "clients") {
     tabs[0].classList.add("active");
@@ -140,15 +124,16 @@ function switchMainTab(tab) {
 }
 
 function toggleAll(source, className) {
-  document.querySelectorAll(`.${className}`).forEach(cb => cb.checked = source.checked);
+  document.querySelectorAll(`.${className}`).forEach((cb) => (cb.checked = source.checked));
 }
 
 async function loadMappingDefinitions() {
   try {
     const response = await fetch("/api/mapping-definitions");
     mappingDefinitions = await response.json();
+    console.log("Mapping definitions loaded:", mappingDefinitions.length);
   } catch (err) {
-    console.error(err);
+    console.error("Error loading mapping definitions:", err);
   }
 }
 
@@ -158,13 +143,11 @@ function initApp() {
   if (window.loadClientDropdown) window.loadClientDropdown();
   if (window.loadAssessTypeClientDropdown) window.loadAssessTypeClientDropdown();
 
-  // Tab switching
-  document.querySelectorAll(".main-tab").forEach(btn => {
+  document.querySelectorAll(".main-tab").forEach((btn) => {
     btn.addEventListener("click", () => switchMainTab(btn.dataset.tab));
   });
 
-  // Close modals on X click
-  document.querySelectorAll(".close").forEach(closeBtn => {
+  document.querySelectorAll(".close").forEach((closeBtn) => {
     closeBtn.addEventListener("click", () => {
       const modal = closeBtn.closest(".modal");
       if (modal && modal.id === "mappingsModal" && window.closeMappingsModal) window.closeMappingsModal();
@@ -176,13 +159,20 @@ function initApp() {
   });
 }
 
+// Export to window
 window.initApp = initApp;
 window.escapeHtml = escapeHtml;
 window.showToast = showToast;
 window.clearStatusMessage = clearStatusMessage;
-window.openMappingsModal = openMappingsModal;
 window.attemptAutoMap = attemptAutoMap;
 window.switchMainTab = switchMainTab;
 window.toggleAll = toggleAll;
 window.REQUIRED_FIELDS = REQUIRED_FIELDS;
 window.AUTO_MAP_DICT = AUTO_MAP_DICT;
+window.mappingDefinitions = mappingDefinitions;
+window.currentMappingClientId = currentMappingClientId;
+window.currentMappingName = currentMappingName;
+window.currentExcelColumns = currentExcelColumns;
+window.currentMappingsList = currentMappingsList;
+window.currentSampleData = currentSampleData;
+window.isEditMode = isEditMode;

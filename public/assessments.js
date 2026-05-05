@@ -1,4 +1,4 @@
-// Assessment Types Management Module
+// ==================== ASSESSMENT TYPES MANAGEMENT ====================
 
 async function loadAssessTypeClientDropdown() {
   try {
@@ -27,13 +27,13 @@ async function loadAssessTypesList(showAll = false) {
   const activeBtn = document.getElementById("showActiveAssessTypesBtn");
   const allBtn = document.getElementById("showAllAssessTypesBtn");
   if (showAll) {
-    activeBtn.style.backgroundColor = "#6c757d";
+    activeBtn.style.backgroundColor = "#9aa0a6";
     allBtn.style.backgroundColor = "#1a73e8";
     activeBtn.innerText = "Show Active";
     allBtn.innerText = "✓ Show All";
   } else {
     activeBtn.style.backgroundColor = "#1a73e8";
-    allBtn.style.backgroundColor = "#6c757d";
+    allBtn.style.backgroundColor = "#9aa0a6";
     activeBtn.innerText = "✓ Show Active";
     allBtn.innerText = "Show All";
   }
@@ -245,6 +245,7 @@ async function exportAssessTypes(format) {
   }
 }
 
+// Event Listeners
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("showActiveAssessTypesBtn")?.addEventListener("click", () => loadAssessTypesList(false));
   document.getElementById("showAllAssessTypesBtn")?.addEventListener("click", () => loadAssessTypesList(true));
@@ -258,6 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("copyAssessBtnModal")?.addEventListener("click", makeCopyAssessFromModal);
 });
 
+// Exports
 window.loadAssessTypeClientDropdown = loadAssessTypeClientDropdown;
 window.loadAssessTypesList = loadAssessTypesList;
 window.changeAssessPage = changeAssessPage;
@@ -268,3 +270,4 @@ window.makeCopyAssessFromModal = makeCopyAssessFromModal;
 window.exportAssessTypes = exportAssessTypes;
 window.saveAndAddNext = saveAndAddNext;
 window.saveAssessType = saveAssessType;
+window.showAddAssessTypeModal = showAddAssessTypeModal;
