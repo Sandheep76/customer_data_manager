@@ -1069,6 +1069,12 @@ app.post("/api/projects/:projectId/status", async (req, res, next) => {
 // ============ SMART MATCH API ============
 const SmartMatchEngine = require("./smartMatchEngine");
 
+// Create a SINGLE instance (not one per request)
+const smartMatchEngine = new SmartMatchEngine({
+  pool,
+  debug: process.env.NODE_ENV !== "production",
+});
+
 // Single column smart match
 app.post("/api/smart-match", async (req, res, next) => {
   try {
@@ -1078,7 +1084,6 @@ app.post("/api/smart-match", async (req, res, next) => {
       return res.status(400).json({ error: "columnName and clientId are required" });
     }
 
-    const smartMatchEngine = new SmartMatchEngine(pool);
     const result = await smartMatchEngine.smartMatch(columnName, parseInt(clientId), sampleData);
 
     res.json({
@@ -1100,7 +1105,6 @@ app.post("/api/smart-match/batch", async (req, res, next) => {
       return res.status(400).json({ error: "columns and clientId are required" });
     }
 
-    const smartMatchEngine = new SmartMatchEngine(pool);
     const results = await smartMatchEngine.batchSmartMatch(columns, parseInt(clientId), sampleDataMap);
 
     res.json(results);
@@ -1114,7 +1118,6 @@ app.post("/api/smart-match/batch", async (req, res, next) => {
 app.get("/api/smart-match/analytics/:clientId", async (req, res, next) => {
   try {
     const { clientId } = req.params;
-    const smartMatchEngine = new SmartMatchEngine(pool);
     const analytics = await smartMatchEngine.getClientAnalytics(parseInt(clientId));
     res.json(analytics);
   } catch (err) {
