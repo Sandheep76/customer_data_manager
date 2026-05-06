@@ -47,7 +47,7 @@ function renderClientsPage() {
   tbody.innerHTML = pageClients
     .map(
       (client) => `
-    <tr ondblclick="editClient(${client.id})" style="cursor: pointer;" title="Double-click to edit">
+    <tr ondblclick="editClient(${client.id})" style="cursor: pointer;" title="✏️ Double-click to edit">
       <td style="text-align: center;"><input type="checkbox" class="client-select-cb" value="${client.id}" onclick="event.stopPropagation()"></td>
       <td style="width: 180px;">${client.client_logo ? `<img src="${client.client_logo}" alt="logo" style="width: 160px; height: 45px; object-fit: contain; border-radius: 6px;">` : '<div style="width:160px;height:45px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;border-radius:6px;">🏢</div>'}</td>
       <td class="ci-number">${escapeHtml(client.client_name)}</td>
@@ -257,6 +257,9 @@ async function bulkDeleteClients() {
   if (failCount > 0) showToast(`Deleted ${successCount} clients, ${failCount} failed.`, "warning");
   else showToast(`Successfully deleted ${successCount} client(s)`, "success");
   loadClientsList(showAllClients);
+  // Uncheck the master checkbox after delete
+  const masterCheckbox = document.getElementById("selectAllClients");
+  if (masterCheckbox) masterCheckbox.checked = false;
   if (window.loadClientDropdown) window.loadClientDropdown();
   if (window.loadAssessTypeClientDropdown) window.loadAssessTypeClientDropdown();
 }

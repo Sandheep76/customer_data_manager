@@ -1,5 +1,10 @@
 // ==================== PROJECTS MANAGEMENT ====================
+// Handles all project-related operations including CRUD, Excel import, and UI interactions
 
+/**
+ * Loads the client dropdown with all active clients
+ * Also handles pre-selection and button state management
+ */
 async function loadClientDropdown() {
   try {
     const response = await fetch("/api/clients");
@@ -7,16 +12,24 @@ async function loadClientDropdown() {
     const select = document.getElementById("clientSelect");
     const showBtn = document.getElementById("showProjectsBtn");
     const newBtn = document.getElementById("newProjectBtn");
+
+    // Populate dropdown with client options
     select.innerHTML =
       '<option value="">-- Select a Client --</option>' +
       clients.map((c) => `<option value="${c.id}">${escapeHtml(c.client_name)}</option>`).join("");
+
+    // Preselect client if one is already selected
     if (currentClientId) select.value = currentClientId;
+
+    // Helper function to enable/disable buttons based on client selection
     const updateButtons = () => {
       const hasClient = select.value !== "";
       if (showBtn) hasClient ? showBtn.removeAttribute("disabled") : showBtn.setAttribute("disabled", "true");
       if (newBtn) hasClient ? newBtn.removeAttribute("disabled") : newBtn.setAttribute("disabled", "true");
     };
     updateButtons();
+
+    // Handle client selection change
     select.onchange = () => {
       currentClientId = select.value;
       document.getElementById("projectsListContainer").classList.add("hidden");
@@ -27,7 +40,8 @@ async function loadClientDropdown() {
       }
       if (window.checkUploadButtonState) window.checkUploadButtonState();
     };
-    // FIX: If client is pre-selected, load mapping templates immediately
+
+    // If client is pre-selected, load mapping templates and assessment types immediately
     if (currentClientId) {
       await loadProjectMappingTemplates();
       await loadAssessTypesForProject();
@@ -37,6 +51,10 @@ async function loadClientDropdown() {
   }
 }
 
+/**
+ * Loads assessment types dropdown for the project modal
+ * Used when adding/editing a project manually
+ */
 async function loadAssessTypesForProject() {
   const clientId = currentClientId;
   const select = document.getElementById("assessTypeSelect");
@@ -47,16 +65,22 @@ async function loadAssessTypesForProject() {
   try {
     const response = await fetch(`/api/assess-types/client/${clientId}`);
     const assessTypes = await response.json();
-    if (assessTypes.length === 0) select.innerHTML = '<option value="">-- No Types Available --</option>';
-    else
+    if (assessTypes.length === 0) {
+      select.innerHTML = '<option value="">-- No Types Available --</option>';
+    } else {
       select.innerHTML =
         '<option value="">-- Assess Type --</option>' +
         assessTypes.map((at) => `<option value="${at.assess_type}">${escapeHtml(at.assess_type)}</option>`).join("");
+    }
   } catch (err) {
     console.error(err);
   }
 }
 
+/**
+ * Loads mapping templates dropdown for the selected client
+ * These templates define how Excel columns map to database fields
+ */
 async function loadProjectMappingTemplates() {
   const select = document.getElementById("clientSelect");
   const clientId = select.value;
@@ -68,88 +92,115 @@ async function loadProjectMappingTemplates() {
   try {
     const response = await fetch(`/api/column-mappings/${clientId}/names`);
     const mappings = await response.json();
-    if (mappings.length === 0) templateSelect.innerHTML = '<option value="">-- No Mapping Templates Available --</option>';
-    else
+    if (mappings.length === 0) {
+      templateSelect.innerHTML = '<option value="">-- No Mapping Templates Available --</option>';
+    } else {
       templateSelect.innerHTML =
         '<option value="">-- Mapping Template --</option>' +
         mappings.map((m) => `<option value="${escapeHtml(m.mapping_name)}">${escapeHtml(m.mapping_name)}</option>`).join("");
+    }
   } catch (err) {
     console.error(err);
   }
 }
 
+/**
+ * Enables/disables the upload button based on client selection
+ */
 function checkUploadButtonState() {
   const uploadBtn = document.getElementById("uploadExcelBtn");
   if (uploadBtn) uploadBtn.disabled = !currentClientId;
 }
 
+/**
+ * Validates prerequisites before opening file picker
+ * Checks that a mapping template is selected
+ */
 function validateUploadPrerequisites() {
   const mappingTemplate = document.getElementById("mappingTemplateSelect").value;
   const templateSelect = document.getElementById("mappingTemplateSelect");
   if (!mappingTemplate) {
-    if (templateSelect.options.length <= 1) showToast("Create and select a mapping template.", "error");
-    else showToast("Select a mapping template for loading the project.", "error");
+    if (templateSelect.options.length <= 1) {
+      showToast("Create and select a mapping template.", "error");
+    } else {
+      showToast("Select a mapping template for loading the project.", "error");
+    }
     return;
   }
   document.getElementById("excelFile").click();
 }
 
+/**
+ * Uploads and processes Excel file, creating projects, contacts, and stakeholders
+ */
 async function uploadExcel() {
   const fileInput = document.getElementById("excelFile");
   const file = fileInput.files[0];
   if (!file) return;
+
   const clientId = document.getElementById("clientSelect").value;
   if (!clientId) {
     showToast("Please select a client first", "error");
     fileInput.value = "";
     return;
   }
+
   const mappingName = document.getElementById("mappingTemplateSelect").value;
   if (!mappingName) {
     showToast("Please select a mapping template first", "error");
     fileInput.value = "";
     return;
   }
+
   const formData = new FormData();
   formData.append("excel", file);
   const uploadStatus = document.getElementById("uploadStatus");
   uploadStatus.innerHTML = "<p>📤 Uploading and importing...</p>";
+
   try {
     const response = await fetch(`/api/upload/${clientId}?assessType=auto&mappingName=${encodeURIComponent(mappingName)}`, {
       method: "POST",
       body: formData,
     });
     const result = await response.json();
+
     if (response.ok) {
-      uploadStatus.innerHTML = `<p class="status-success">✅ ${escapeHtml(result.message)}</p>`;
-      if (result.summary)
-        uploadStatus.innerHTML += `<p class="status-success">Projects: ${result.summary.projects_created}, Contacts: ${result.summary.contacts_created}, Stakeholders: ${result.summary.stakeholders_created}</p>`;
+      uploadStatus.innerHTML = `<p class="status-success">✅ ${escapeHtml(result.message)} | Projects: ${result.summary.projects_created} | Contacts: ${result.summary.contacts_created} | Stakeholders: ${result.summary.stakeholders_created}</p>`;
       clearStatusMessage("uploadStatus");
       loadProjects();
-    } else uploadStatus.innerHTML = `<p class="status-error">❌ Error: ${escapeHtml(result.error)}</p>`;
+    } else {
+      uploadStatus.innerHTML = `<p class="status-error">❌ Error: ${escapeHtml(result.error)}</p>`;
+    }
   } catch (err) {
     uploadStatus.innerHTML = `<p class="status-error">❌ Upload failed: ${escapeHtml(err.message)}</p>`;
   }
   fileInput.value = "";
 }
 
+/**
+ * Loads and displays projects for the currently selected client
+ */
 async function loadProjects() {
   currentClientId = document.getElementById("clientSelect").value;
   const listContainer = document.getElementById("projectsListContainer");
+
   if (!currentClientId) {
     showToast("Please select a client first", "error");
     listContainer.classList.add("hidden");
     return;
   }
+
   try {
     const response = await fetch(`/api/clients/${currentClientId}/projects`);
     const projects = await response.json();
     allProjects = projects;
+
     if (allProjects.length === 0) {
       listContainer.classList.add("hidden");
       showToast("No projects found for this client.", "info");
       return;
     }
+
     listContainer.classList.remove("hidden");
     currentPage = 1;
     totalPages = Math.ceil(allProjects.length / itemsPerPage);
@@ -160,54 +211,75 @@ async function loadProjects() {
   }
 }
 
+/**
+ * Renders the current page of projects in the table
+ */
 function renderProjectsPage() {
   const tbody = document.getElementById("projectsBody");
   const start = (currentPage - 1) * itemsPerPage;
   const end = start + itemsPerPage;
   const pageProjects = allProjects.slice(start, end);
+
   if (pageProjects.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #666;">No projects found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #666;">No projects found.奠基</tr>';
     return;
   }
+
   tbody.innerHTML = pageProjects
     .map(
-      (p) => `<tr ondblclick="editProject(${p.id})" style="cursor: pointer;">
-    <td style="text-align: center;"><input type="checkbox" class="project-select-cb" value="${p.id}" onclick="event.stopPropagation()"></td>
-    <td class="ci-number">${p.ci_number || "-"}</td>
-    <td>${escapeHtml(p.customer_name) || "-"}</td>
-    <td>${escapeHtml(p.assess_type) || "-"}</td>
-    <td>${escapeHtml(p.cust_country) || "-"}</td>
-    <td>${escapeHtml(p.project_stage) || "-"}</td>
-    <td>${new Date(p.created_at).toLocaleDateString()}</td>
-    <td style="text-align: right;"></td>
-  </tr>`,
+      (p) => `<tr ondblclick="editProject(${p.id})" style="cursor: pointer;" title="✏️ Double-click to edit">
+        <td style="text-align: center;"><input type="checkbox" class="project-select-cb" value="${p.id}" onclick="event.stopPropagation()"></td>
+        <td class="ci-number">${p.ci_number || "-"}</td>
+        <td>${escapeHtml(p.customer_name) || "-"}</td>
+        <td>${escapeHtml(p.assess_type) || "-"}</td>
+        <td>${escapeHtml(p.cust_country) || "-"}</td>
+        <td>${escapeHtml(p.project_stage) || "-"}</td>
+        <td>${new Date(p.created_at).toLocaleDateString()}</td>
+        <td style="text-align: right;"></td>
+      </tr>`,
     )
     .join("");
 }
 
+/**
+ * Renders pagination controls for the projects table
+ */
 function renderPagination() {
   const container = document.getElementById("paginationControls");
   const infoContainer = document.getElementById("paginationInfo");
+
   if (totalPages <= 1) {
     container.classList.add("hidden");
     infoContainer.classList.add("hidden");
     return;
   }
+
   container.classList.remove("hidden");
   infoContainer.classList.remove("hidden");
+
   let html = `<button onclick="changePage(1)" ${currentPage === 1 ? "disabled" : ""}>First</button>`;
   html += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? "disabled" : ""}>Previous</button>`;
+
   let startPage = Math.max(1, currentPage - 2);
   let endPage = Math.min(totalPages, currentPage + 2);
+
   if (startPage > 1) html += `<button onclick="changePage(${startPage - 1})">...</button>`;
-  for (let i = startPage; i <= endPage; i++) html += `<button onclick="changePage(${i})" class="${i === currentPage ? "active" : ""}">${i}</button>`;
+  for (let i = startPage; i <= endPage; i++) {
+    html += `<button onclick="changePage(${i})" class="${i === currentPage ? "active" : ""}">${i}</button>`;
+  }
   if (endPage < totalPages) html += `<button onclick="changePage(${endPage + 1})">...</button>`;
+
   html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? "disabled" : ""}>Next</button>`;
   html += `<button onclick="changePage(${totalPages})" ${currentPage === totalPages ? "disabled" : ""}>Last</button>`;
+
   container.innerHTML = html;
   infoContainer.innerHTML = `Showing ${(currentPage - 1) * itemsPerPage + 1} to ${Math.min(currentPage * itemsPerPage, allProjects.length)} of ${allProjects.length} projects`;
 }
 
+/**
+ * Changes the current page of projects
+ * @param {number} page - Page number to navigate to
+ */
 function changePage(page) {
   if (page < 1 || page > totalPages) return;
   currentPage = page;
@@ -215,8 +287,13 @@ function changePage(page) {
   renderPagination();
 }
 
+/**
+ * Opens the modal for adding a new project (manual entry)
+ */
 function showAddProjectModal() {
-  if (!currentClientId && document.getElementById("clientSelect").value) currentClientId = document.getElementById("clientSelect").value;
+  if (!currentClientId && document.getElementById("clientSelect").value) {
+    currentClientId = document.getElementById("clientSelect").value;
+  }
   if (!currentClientId) {
     showToast("Please select a client first", "error");
     return;
@@ -233,26 +310,37 @@ function showAddProjectModal() {
   loadProjectAssessTypes();
 }
 
+/**
+ * Loads assessment types for the project modal dropdown
+ */
 async function loadProjectAssessTypes() {
   if (!currentClientId) return;
   try {
     const response = await fetch(`/api/assess-types/client/${currentClientId}`);
     const assessTypes = await response.json();
     const select = document.getElementById("projectAssessType");
-    if (assessTypes.length === 0) select.innerHTML = '<option value="">-- No Assessment Types Available --</option>';
-    else
+
+    if (assessTypes.length === 0) {
+      select.innerHTML = '<option value="">-- No Assessment Types Available --</option>';
+    } else {
       select.innerHTML =
         '<option value="">-- Select Assessment Type --</option>' +
         assessTypes.map((at) => `<option value="${at.assess_type}">${escapeHtml(at.assess_type)} v${at.assess_version}</option>`).join("");
+    }
   } catch (err) {
     console.error(err);
   }
 }
 
+/**
+ * Opens the modal for editing an existing project
+ * @param {number} projectId - ID of project to edit
+ */
 async function editProject(projectId) {
   try {
     const response = await fetch(`/api/projects/${projectId}`);
     const data = await response.json();
+
     document.getElementById("projectModalTitle").textContent = "Edit Project";
     document.getElementById("projectId").value = data.project.id;
     document.getElementById("projectCiNumber").value = data.project.ci_number || "Auto-generated";
@@ -275,10 +363,12 @@ async function editProject(projectId) {
     document.getElementById("contractorPhone").value = data.project.contractor_phone || "";
     document.getElementById("contractorCompany").value = data.project.contractor_company || "";
     document.getElementById("uploadDate").value = data.project.upload_date ? new Date(data.project.upload_date).toISOString().split("T")[0] : "";
+
     await loadProjectAssessTypes();
     setTimeout(() => {
       document.getElementById("projectAssessType").value = data.project.assess_type || "";
     }, 100);
+
     document.getElementById("copyProjectBtnModal").style.display = "block";
     document.getElementById("projectModal").style.display = "block";
   } catch (err) {
@@ -286,6 +376,9 @@ async function editProject(projectId) {
   }
 }
 
+/**
+ * Saves a project (create or update) to the database
+ */
 async function saveProject() {
   const projectId = document.getElementById("projectId").value;
   const projectData = {
@@ -311,6 +404,7 @@ async function saveProject() {
     contractor_company: document.getElementById("contractorCompany").value,
     upload_date: document.getElementById("uploadDate").value,
   };
+
   if (!projectData.customer_name) {
     showToast("Customer/Company Name is required", "error");
     return;
@@ -319,16 +413,23 @@ async function saveProject() {
     showToast("Assessment Type is required", "error");
     return;
   }
+
   try {
     let response;
-    if (projectId)
+    if (projectId) {
       response = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(projectData),
       });
-    else
-      response = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(projectData) });
+    } else {
+      response = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(projectData),
+      });
+    }
+
     if (response.ok) {
       showToast("Project saved successfully", "success");
       closeProjectModal();
@@ -342,15 +443,24 @@ async function saveProject() {
   }
 }
 
+/**
+ * Saves a project and immediately opens the modal for another new project
+ */
 async function saveProjectAndAddNext() {
   await saveProject();
   showAddProjectModal();
 }
 
+/**
+ * Closes the project modal
+ */
 function closeProjectModal() {
   document.getElementById("projectModal").style.display = "none";
 }
 
+/**
+ * Deletes all selected projects after confirmation
+ */
 async function bulkDeleteProjects() {
   const checkboxes = document.querySelectorAll(".project-select-cb:checked");
   if (checkboxes.length === 0) {
@@ -358,6 +468,7 @@ async function bulkDeleteProjects() {
     return;
   }
   if (!confirm(`Delete ${checkboxes.length} selected project(s)?`)) return;
+
   let successCount = 0,
     failCount = 0;
   for (let cb of checkboxes) {
@@ -369,22 +480,40 @@ async function bulkDeleteProjects() {
       failCount++;
     }
   }
-  if (failCount > 0) showToast(`Deleted ${successCount} projects, ${failCount} failed.`, "warning");
-  else showToast(`Successfully deleted ${successCount} project(s)`, "success");
-  loadProjects();
+
+  if (failCount > 0) {
+    showToast(`Deleted ${successCount} projects, ${failCount} failed.`, "warning");
+  } else {
+    showToast(`Successfully deleted ${successCount} project(s)`, "success");
+  }
+
+  await loadProjects();
+
+  // Uncheck the master checkbox after delete
+  const masterCheckbox = document.getElementById("selectAllProjects");
+  if (masterCheckbox) masterCheckbox.checked = false;
 }
 
+/**
+ * Creates a copy of the current project for duplication
+ * Opens the modal with copied data for editing before save
+ */
 function makeCopyFromModal() {
   document.getElementById("projectModalTitle").textContent = "Clone Project (Edit before saving)";
   document.getElementById("projectId").value = "";
   document.getElementById("projectCiNumber").value = "Auto-generated";
   document.getElementById("uploadDate").value = new Date().toISOString().split("T")[0];
   const custName = document.getElementById("customerName").value;
-  if (custName && !custName.endsWith("_COPY")) document.getElementById("customerName").value = custName + "_COPY";
+  if (custName && !custName.endsWith("_COPY")) {
+    document.getElementById("customerName").value = custName + "_COPY";
+  }
   document.getElementById("copyProjectBtnModal").style.display = "none";
   showToast("Project copied! Make your changes and click Save.", "info");
 }
 
+/**
+ * Exports projects to Excel file for the selected client
+ */
 async function exportProjects() {
   if (!currentClientId) {
     showToast("Please select a client first", "error");
@@ -397,6 +526,7 @@ async function exportProjects() {
       showToast("No projects available to export", "error");
       return;
     }
+
     const exportData = projects.map((p) => ({
       "CI #": p.ci_number,
       "Project Name": p.project_name,
@@ -419,6 +549,7 @@ async function exportProjects() {
       "Upload Date": p.upload_date,
       "Created Date": p.created_at ? new Date(p.created_at).toLocaleDateString() : "",
     }));
+
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Projects");
@@ -429,11 +560,40 @@ async function exportProjects() {
   }
 }
 
-// Event Listeners
+// ==================== DROPDOWN TOGGLE FUNCTIONALITY ====================
+
+/**
+ * Toggles the new project dropdown menu visibility
+ */
+function toggleNewProjectDropdown() {
+  const dropdown = document.getElementById("newProjectDropdown");
+  if (dropdown) {
+    dropdown.classList.toggle("hidden");
+  }
+}
+
+/**
+ * Opens the manual add project modal and closes the dropdown
+ */
+function handleManualProject() {
+  const dropdown = document.getElementById("newProjectDropdown");
+  if (dropdown) dropdown.classList.add("hidden");
+  showAddProjectModal();
+}
+
+/**
+ * Triggers the Excel file upload and closes the dropdown
+ */
+function handleExcelImport() {
+  const dropdown = document.getElementById("newProjectDropdown");
+  if (dropdown) dropdown.classList.add("hidden");
+  validateUploadPrerequisites();
+}
+
+// ==================== EVENT LISTENERS ====================
 document.addEventListener("DOMContentLoaded", () => {
+  // Main button listeners
   document.getElementById("showProjectsBtn")?.addEventListener("click", loadProjects);
-  document.getElementById("newProjectBtn")?.addEventListener("click", showAddProjectModal);
-  document.getElementById("uploadExcelBtn")?.addEventListener("click", validateUploadPrerequisites);
   document.getElementById("excelFile")?.addEventListener("change", uploadExcel);
   document.getElementById("bulkDeleteProjectsBtn")?.addEventListener("click", bulkDeleteProjects);
   document.getElementById("exportProjectsBtn")?.addEventListener("click", exportProjects);
@@ -442,12 +602,47 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("saveProjectAndAddNextBtn")?.addEventListener("click", saveProjectAndAddNext);
   document.getElementById("closeProjectBtn")?.addEventListener("click", closeProjectModal);
   document.getElementById("copyProjectBtnModal")?.addEventListener("click", makeCopyFromModal);
+
+  // Manage Mappings button - opens the mappings modal
   document.getElementById("manageMappingsBtn")?.addEventListener("click", () => {
     if (window.openMappingsModal) window.openMappingsModal();
   });
+
+  // ==================== NEW PROJECT DROPDOWN BUTTON ====================
+  const newProjectBtn = document.getElementById("newProjectBtn");
+  const newProjectDropdown = document.getElementById("newProjectDropdown");
+  const manualProjectBtn = document.getElementById("manualProjectBtn");
+  const excelProjectBtn = document.getElementById("excelProjectBtn");
+
+  // Toggle dropdown when clicking the New Project button
+  if (newProjectBtn) {
+    newProjectBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleNewProjectDropdown();
+    });
+  }
+
+  // Handle manual project option
+  if (manualProjectBtn) {
+    manualProjectBtn.addEventListener("click", handleManualProject);
+  }
+
+  // Handle Excel import option
+  if (excelProjectBtn) {
+    excelProjectBtn.addEventListener("click", handleExcelImport);
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (newProjectDropdown && !newProjectDropdown.classList.contains("hidden")) {
+      if (!newProjectBtn?.contains(e.target) && !newProjectDropdown.contains(e.target)) {
+        newProjectDropdown.classList.add("hidden");
+      }
+    }
+  });
 });
 
-// Exports
+// ==================== EXPORTS ====================
 window.loadClientDropdown = loadClientDropdown;
 window.loadAssessTypesForProject = loadAssessTypesForProject;
 window.loadProjectMappingTemplates = loadProjectMappingTemplates;

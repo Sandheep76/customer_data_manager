@@ -91,7 +91,7 @@ function clearStatusMessage(elementId) {
   statusTimeout = setTimeout(() => {
     const element = document.getElementById(elementId);
     if (element) element.innerHTML = "";
-  }, 5000);
+  }, 10000);
 }
 
 function attemptAutoMap(excelCol) {

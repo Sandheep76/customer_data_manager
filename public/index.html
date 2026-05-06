@@ -98,38 +98,51 @@
 
       <!-- PROJECTS TAB -->
       <div id="projectsTab" class="tab-content-panel">
-        <div class="card">
-          <div class="projects-controls-grid">
-            <select id="clientSelect" class="full-width">
+        <!-- TWO SEPARATE WHITE CARDS (NO OUTER CARD WRAPPER) -->
+        <div class="projects-cards">
+          <!-- LEFT CARD -->
+          <div class="project-card left-card">
+            <select id="clientSelect" class="project-client-dropdown" title="Select a client to view or manage projects">
               <option value="">-- Select a Client --</option>
             </select>
-            <div class="two-col-grid">
-              <button id="showProjectsBtn" disabled>📋 Show Existing Projects</button>
-              <button id="newProjectBtn" class="btn-success" disabled>Add New Project</button>
-            </div>
-            <div class="two-col-grid">
-              <select id="assessTypeSelect" class="small-dropdown" disabled>
-                <option value="">-- Assess Type (Auto) --</option>
-              </select>
-              <select id="mappingTemplateSelect" class="small-dropdown">
-                <option value="">-- Mapping Template --</option>
-              </select>
-            </div>
-            <div class="two-col-grid">
-              <button id="uploadExcelBtn" disabled>📁 Load Projects from Excel</button>
-              <button id="manageMappingsBtn" class="btn-warning">🔧 Manage Mappings</button>
+            <button id="showProjectsBtn" class="btn-secondary-light project-btn" disabled title="Show all projects for selected client">
+              📋 Show Projects
+            </button>
+          </div>
+
+          <!-- RIGHT CARD -->
+          <div class="project-card right-card">
+            <button id="manageMappingsBtn" class="btn-primary project-btn" title="Manage field mappings for Excel import">🔧 Manage Mappings</button>
+            <select id="mappingTemplateSelect" class="project-template-dropdown" title="Select mapping template for Excel import">
+              <option value="">-- Mapping Template --</option>
+            </select>
+            <div class="project-dropdown">
+              <button id="newProjectBtn" class="btn-success project-btn dropdown-trigger" disabled title="Add a new project (Manual or from Excel)">
+                ▼ + New Project
+              </button>
+              <div id="newProjectDropdown" class="dropdown-content hidden">
+                <button id="manualProjectBtn" class="dropdown-item" title="Add project manually by filling out the form">✏️ Add Manually</button>
+                <button id="excelProjectBtn" class="dropdown-item" title="Import projects from Excel file using selected mapping template">
+                  📁 Import from Excel
+                </button>
+              </div>
             </div>
           </div>
-          <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden" />
-          <div id="uploadStatus" class="mt-2"></div>
         </div>
 
+        <!-- Hidden file input for Excel upload -->
+        <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden" />
+        <div id="uploadStatus" class="mt-2"></div>
+
+        <!-- Projects List Container -->
         <div id="projectsListContainer" class="card hidden">
           <div class="table-wrapper">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 40px; text-align: center"><input type="checkbox" id="selectAllProjects" /></th>
+                  <th style="width: 40px; text-align: center">
+                    <input type="checkbox" id="selectAllProjects" title="Select/Deselect all projects" />
+                  </th>
                   <th>CI #</th>
                   <th>Customer/Company Name</th>
                   <th>Assess Type</th>
@@ -138,8 +151,8 @@
                   <th>Created</th>
                   <th style="text-align: right; width: 100px">
                     <div class="flex gap-2 justify-end">
-                      <button id="bulkDeleteProjectsBtn" class="btn-danger" title="Delete Selected">🗑️</button>
-                      <button id="exportProjectsBtn" class="btn-success" title="Export Projects">📊</button>
+                      <button id="bulkDeleteProjectsBtn" class="btn-danger" title="Delete selected projects">🗑️</button>
+                      <button id="exportProjectsBtn" class="btn-success" title="Export projects to Excel">📊</button>
                     </div>
                   </th>
                 </tr>
