@@ -1114,6 +1114,35 @@ app.post("/api/smart-match/batch", async (req, res, next) => {
   }
 });
 
+// Progressive batch smart match (with configurable threshold)
+app.post("/api/smart-match/batch-progressive", async (req, res, next) => {
+  try {
+    const { columns, clientId, sampleDataMap, threshold, aggressivenessLevel } = req.body;
+
+    if (!columns || !clientId) {
+      return res.status(400).json({ error: "columns and clientId are required" });
+    }
+
+    // Temporarily override threshold for this request
+    const originalThreshold = smartMatchEngine.config.thresholds.algorithm;
+    if (threshold) {
+      smartMatchEngine.config.thresholds.algorithm = threshold;
+    }
+
+    console.log(`📊 Progressive Smart Match - Level ${aggressivenessLevel + 1}, Threshold: ${threshold}%`);
+
+    const results = await smartMatchEngine.batchSmartMatch(columns, parseInt(clientId), sampleDataMap);
+
+    // Restore original threshold
+    smartMatchEngine.config.thresholds.algorithm = originalThreshold;
+
+    res.json(results);
+  } catch (err) {
+    console.error("Progressive smart match error:", err);
+    next(err);
+  }
+});
+
 // Get client template analytics
 app.get("/api/smart-match/analytics/:clientId", async (req, res, next) => {
   try {

@@ -166,82 +166,113 @@
       </div>
     </div>
 
-    <!-- MAPPINGS MODAL -->
+    <!-- MAPPINGS MODAL - REDESIGNED -->
     <div id="mappingsModal" class="modal">
-      <div class="modal-content">
+      <div class="modal-content mappings-modal">
         <div class="modal-header">
-          <h3>Manage Field Mappings</h3>
+          <h3>📋 Manage Field Mappings</h3>
           <span class="close" data-modal="mappingsModal">&times;</span>
         </div>
-        <div class="top-controls-flex">
-          <select id="mappingClientSelect" class="small-dropdown" style="min-width: 400px">
-            <option value="">-- Select a Client --</option>
-          </select>
-          <div class="top-controls-buttons">
-            <button id="toggleInlineNewMappingBtn" class="btn-success" style="width: 175px" disabled>New Mapping</button>
+
+        <!-- Client Selection Section (no label) -->
+        <div class="client-section">
+          <div class="client-controls">
+            <select id="mappingClientSelect" class="client-dropdown" title="Select a client to manage mappings">
+              <option value="">-- Select a Client --</option>
+            </select>
+            <button id="toggleInlineNewMappingBtn" class="btn-new-mapping" disabled title="Create a new mapping template">+ New Mapping</button>
           </div>
         </div>
+
+        <!-- New Mapping Inline Form -->
         <div id="inlineNewMappingSection" class="inline-new-mapping hidden">
-          <div class="flex gap-2 align-end flex-wrap">
-            <div class="form-group flex-1">
-              <label>Mapping Name</label><input type="text" id="newMappingNameInline" placeholder="e.g., FieldMap-AF" />
-            </div>
-            <button id="createMappingInlineBtn" style="height: 35px; width: 175px">Create Template</button>
-            <button id="cancelInlineMappingBtn" class="btn-secondary" style="height: 35px; width: 175px">Cancel</button>
+          <div class="inline-form">
+            <input type="text" id="newMappingNameInline" placeholder="e.g., FieldMap-AF" class="mapping-name-input" />
+            <button id="createMappingInlineBtn" class="btn-primary">Create Template</button>
+            <button id="cancelInlineMappingBtn" class="btn-secondary">Cancel</button>
           </div>
         </div>
-        <div id="mappingSelectorModal" class="tab-row-flex hidden">
-          <div class="flex align-end gap-3">
-            <div id="mappingBadgesModal" class="mapping-badges-scroll"></div>
-            <div class="mapping-actions">
-              <button id="renameMappingBtnModal" class="btn-warning hidden" title="Rename">✏️</button>
-              <button id="deleteMappingBtnModal" class="btn-danger hidden" title="Delete">🗑️</button>
+
+        <!-- Templates Section with Status Area -->
+        <div id="mappingSelectorModal" class="templates-section hidden">
+          <div class="templates-bar">
+            <div id="mappingBadgesModal" class="templates-scroll"></div>
+            <div id="templatesInlineStatus" class="templates-status"></div>
+            <div class="template-actions">
+              <button id="loadExcelBtnModal" class="btn-icon-only" title="Load Excel file to map columns">📂</button>
+              <button id="renameMappingBtnModal" class="btn-icon-only hidden" title="Rename template">✏️</button>
+              <button id="deleteMappingBtnModal" class="btn-icon-only hidden" title="Delete template">🗑️</button>
             </div>
-          </div>
-          <div id="uploadColumnsAreaModal" class="hidden">
-            <input type="file" id="mappingExcelFileModal" accept=".xlsx,.xls" class="hidden" />
-            <button id="loadExcelBtnModal" style="width: 175px">📂 Load Columns</button>
           </div>
         </div>
-        <div id="mappingTableContainerModal" class="hidden">
-          <div class="flex-between mb-2">
-            <div class="flex gap-3">
-              <button id="smartMatchBtn" class="smart-match-btn">✨ Smart Match</button>
-              <div id="columnsStatusModal"></div>
-            </div>
-            <div class="flex gap-3 align-center">
-              <span id="mappingProgressText" class="mapping-progress">Mapped: 0 / 0</span>
-              <button id="ignoreUnmappedBtn" class="btn-secondary">Ignore Unmapped</button>
-            </div>
-          </div>
+
+        <!-- Hidden file input -->
+        <input type="file" id="mappingExcelFileModal" accept=".xlsx,.xls" class="hidden" />
+
+        <!-- Mapping Table Container -->
+        <div id="mappingTableContainerModal" class="mapping-container hidden">
+          <!-- Status area -->
+          <div id="columnsStatusModal" class="status-area"></div>
+
+          <!-- Mapping Table -->
           <div class="mapping-table-wrapper">
             <table class="mapping-table" id="mappingTableModal">
               <thead>
                 <tr>
-                  <th>Column Title</th>
+                  <th>Column Name</th>
                   <th>Sample Data</th>
                   <th style="width: 40px; text-align: center"></th>
-                  <th>Map to System Field</th>
-                  <th style="width: 150px">
+                  <th>Map to Field</th>
+                  <th style="width: 100px">
                     Action
-                    <button id="exportTemplateBtnModal" class="btn-icon" title="Export Mapping" style="margin-left: 8px">📊</button>
+                    <button id="exportTemplateBtnModal" class="btn-export-icon" title="Export mapping template">📊</button>
                   </th>
                 </tr>
               </thead>
               <tbody id="mappingTableBodyModal"></tbody>
             </table>
           </div>
-          <div class="modal-footer">
-            <div class="modal-footer-left">
-              <button id="saveMappingBtn" class="btn-success" disabled>Save Mapping</button>
+
+          <!-- Progress Bar (single row) -->
+          <div class="progress-row">
+            <span id="mappingProgressText" class="mapping-progress">Mapped: 0 / 0</span>
+            <div class="progress-bar-wrapper">
+              <div id="mappingProgressFill" class="progress-bar-fill" style="width: 0%"></div>
             </div>
-            <div class="modal-footer-right">
+            <span id="progressPercentage" class="progress-percentage">0%</span>
+          </div>
+
+          <!-- Bottom Action Bar -->
+          <div class="bottom-action-bar">
+            <div class="left-group">
+              <div class="smart-match-wrapper">
+                <button id="smartMatchBtn" class="btn-smart-match">✨ Smart Match ▼</button>
+                <div id="smartMatchDropdown" class="smart-match-dropdown hidden">
+                  <button id="smartMatchLevel1" data-threshold="60">🎯 Level 1: Cautious (60%)</button>
+                  <button id="smartMatchLevel2" data-threshold="52">⚡ Level 2: Moderate (52%)</button>
+                  <button id="smartMatchLevel3" data-threshold="44">🌟 Level 3: Balanced (44%)</button>
+                  <button id="smartMatchLevel4" data-threshold="36">🔥 Level 4: Aggressive (36%)</button>
+                  <button id="smartMatchLevel5" data-threshold="25">💪 Level 5: Maximum (25%)</button>
+                  <hr style="margin: 4px 0" />
+                  <button id="resetSmartMatchBtn">🔄 Reset Progressive Mode</button>
+                </div>
+              </div>
+              <button id="ignoreUnmappedBtn" class="btn-ignore">⏭️ Ignore Unmapped</button>
+            </div>
+            <div class="right-group">
+              <button id="saveMappingBtn" class="btn-save" disabled>💾 Save</button>
               <button id="cancelMappingBtn" class="btn-secondary">Cancel</button>
               <button id="closeMappingModalBtn" class="btn-close">Close</button>
             </div>
           </div>
         </div>
-        <div id="noMappingSelectedModal" class="no-mapping-placeholder">Select a client to view or create mapping templates</div>
+
+        <!-- No Mapping Selected Placeholder -->
+        <div id="noMappingSelectedModal" class="no-mapping-placeholder">
+          <div class="placeholder-icon">📋</div>
+          <p>Select a client to view or create mapping templates</p>
+          <small>Create your first mapping template to get started</small>
+        </div>
       </div>
     </div>
 

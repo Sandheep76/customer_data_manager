@@ -134,6 +134,7 @@ async function loadMappingDefinitions() {
   try {
     const response = await fetch("/api/mapping-definitions");
     mappingDefinitions = await response.json();
+    window.mappingDefinitions = mappingDefinitions; // ← Add this line
     console.log("Mapping definitions loaded:", mappingDefinitions.length);
   } catch (err) {
     console.error("Error loading mapping definitions:", err);

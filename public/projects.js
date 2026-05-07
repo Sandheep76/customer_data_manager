@@ -35,7 +35,7 @@ async function loadClientDropdown() {
       document.getElementById("projectsListContainer").classList.add("hidden");
       updateButtons();
       if (currentClientId) {
-        if (window.loadAssessTypesForProject) window.loadAssessTypesForProject();
+        // if (window.loadAssessTypesForProject) window.loadAssessTypesForProject();
         if (window.loadProjectMappingTemplates) window.loadProjectMappingTemplates();
       }
       if (window.checkUploadButtonState) window.checkUploadButtonState();
@@ -51,13 +51,17 @@ async function loadClientDropdown() {
   }
 }
 
-/**
- * Loads assessment types dropdown for the project modal
- * Used when adding/editing a project manually
- */
+// Loads assessment types dropdown for the project modal
 async function loadAssessTypesForProject() {
   const clientId = currentClientId;
   const select = document.getElementById("assessTypeSelect");
+
+  // Add this null check
+  if (!select) {
+    console.log("assessTypeSelect element not found - skipping");
+    return;
+  }
+
   if (!clientId) {
     select.innerHTML = '<option value="">-- Assess Type --</option>';
     return;
@@ -85,6 +89,7 @@ async function loadProjectMappingTemplates() {
   const select = document.getElementById("clientSelect");
   const clientId = select.value;
   const templateSelect = document.getElementById("mappingTemplateSelect");
+  if (!templateSelect) return; // ← Add this line
   if (!clientId) {
     templateSelect.innerHTML = '<option value="">-- Mapping Template --</option>';
     return;

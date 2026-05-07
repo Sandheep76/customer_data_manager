@@ -1,6 +1,9 @@
 // ==================== FIELD MAPPINGS MANAGEMENT ====================
 console.log("=== MAPPINGS.JS LOADED ===");
 
+// Note: Global variables are already declared in main.js
+// Do NOT redeclare them here - just use them
+
 async function loadMappingClientDropdownModal() {
   console.log("loadMappingClientDropdownModal called");
 
@@ -88,11 +91,17 @@ async function loadMappingNamesModal() {
     if (!container) return;
 
     if (mappings.length === 0) {
-      container.innerHTML = ""; // Empty - no duplicate message
+      container.innerHTML = "";
       if (selectorDiv) selectorDiv.classList.remove("hidden");
-      document.getElementById("uploadColumnsAreaModal").classList.add("hidden");
-      document.getElementById("mappingTableContainerModal").classList.add("hidden");
-      document.getElementById("noMappingSelectedModal").style.display = "block";
+
+      // FIX: Check if elements exist before accessing classList
+      const uploadArea = document.getElementById("uploadColumnsAreaModal");
+      const tableContainer = document.getElementById("mappingTableContainerModal");
+      const noMappingDiv = document.getElementById("noMappingSelectedModal");
+
+      if (uploadArea) uploadArea.classList.add("hidden");
+      if (tableContainer) tableContainer.classList.add("hidden");
+      if (noMappingDiv) noMappingDiv.style.display = "block";
       return;
     }
 
@@ -149,32 +158,29 @@ async function selectMappingModal(mappingName) {
   currentMappingsList = [];
 
   document.getElementById("mappingExcelFileModal").value = "";
-  document.getElementById("uploadColumnsAreaModal").classList.remove("hidden");
-  document.getElementById("mappingTableContainerModal").classList.add("hidden");
-  document.getElementById("columnsStatusModal").innerHTML = "";
-  document.getElementById("noMappingSelectedModal").style.display = "none";
+
+  const mappingContainer = document.getElementById("mappingTableContainerModal");
+  const noMappingDiv = document.getElementById("noMappingSelectedModal");
+  const uploadArea = document.getElementById("uploadColumnsAreaModal");
+
+  if (mappingContainer) mappingContainer.classList.remove("hidden");
+  if (noMappingDiv) noMappingDiv.style.display = "none";
+  if (uploadArea) uploadArea.classList.remove("hidden");
 
   const deleteBtn = document.getElementById("deleteMappingBtnModal");
   const renameBtn = document.getElementById("renameMappingBtnModal");
+  const exportBtn = document.getElementById("exportTemplateBtnModal");
 
   if (deleteBtn) deleteBtn.classList.remove("hidden");
   if (renameBtn) renameBtn.classList.remove("hidden");
+  if (exportBtn) exportBtn.classList.remove("hidden");
 
-  for (const badge of document.querySelectorAll("#mappingBadgesModal .mapping-badge")) {
-    badge.classList.remove("active", "unsaved");
-    if (badge.innerText === mappingName) {
-      badge.classList.add("active");
-      try {
-        const checkResponse = await fetch(`/api/column-mappings/${currentMappingClientId}?mappingName=${encodeURIComponent(mappingName)}`);
-        const mappings = await checkResponse.json();
-        if (mappings.length === 0) {
-          badge.classList.add("unsaved");
-        }
-      } catch (e) {
-        console.error("Error checking mapping content:", e);
-      }
+  document.querySelectorAll("#mappingBadgesModal .mapping-badge").forEach((b) => {
+    b.classList.remove("active", "unsaved");
+    if (b.innerText === mappingName) {
+      b.classList.add("active");
     }
-  }
+  });
 
   try {
     const response = await fetch(`/api/column-mappings/${currentMappingClientId}?mappingName=${encodeURIComponent(mappingName)}`);
@@ -183,19 +189,19 @@ async function selectMappingModal(mappingName) {
 
     if (mappings.length > 0) {
       currentExcelColumns = [...new Set(mappings.map((m) => m.excel_column))];
-      document.getElementById("columnsStatusModal").innerHTML =
-        `<p class="status-success">✅ Loaded ${currentExcelColumns.length} mapped columns from "${escapeHtml(mappingName)}"</p>`;
+      showTemplatesStatus(`✅ Loaded ${currentExcelColumns.length} mapped columns from "${escapeHtml(mappingName)}"`, "success");
       renderMappingTableWithExistingModal();
-      document.getElementById("mappingTableContainerModal").classList.remove("hidden");
+      if (mappingContainer) mappingContainer.classList.remove("hidden");
     } else {
       const activeBadge = document.querySelector("#mappingBadgesModal .mapping-badge.active");
       if (activeBadge) activeBadge.classList.add("unsaved");
-      document.getElementById("mappingTableContainerModal").classList.add("hidden");
-      if (window.showToast) showToast("No mappings defined yet. Please click 📂 Load Columns.", "info");
+      if (mappingContainer) mappingContainer.classList.add("hidden");
+      showTemplatesStatus(`📋 New template "${escapeHtml(mappingName)}" - Click 📂 to load Excel`, "info");
+      if (window.showToast) showToast("No mappings defined yet. Please click 📂 Load Excel to start.", "info");
     }
   } catch (err) {
     console.error("Error loading mappings:", err);
-    document.getElementById("columnsStatusModal").innerHTML = `<p class="status-error">Error: ${escapeHtml(err.message)}</p>`;
+    showTemplatesStatus(`Error: ${escapeHtml(err.message)}`, "error");
   }
 }
 
@@ -203,21 +209,24 @@ function renderMappingTableWithExistingModal() {
   const tbody = document.getElementById("mappingTableBodyModal");
   if (!tbody) return;
 
+  const definitions = window.mappingDefinitions || [];
+
   const existingMap = {};
   currentMappingsList.forEach((m) => {
     existingMap[m.excel_column] = m.target_field;
   });
 
   if (currentExcelColumns.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No columns loaded. Upload an Excel file.</td></tr>';
+    tbody.innerHTML =
+      '</table><td colspan="5" style="text-align:center; padding: 40px;">📂 No columns loaded. Click the 📂 button to upload an Excel file.奠基</tr>';
     return;
   }
 
   tbody.innerHTML = currentExcelColumns
     .map((col) => {
-      const optionsHtml = mappingDefinitions
+      const optionsHtml = definitions
         .map((def) => {
-          const isReq = window.REQUIRED_FIELDS && window.REQUIRED_FIELDS.includes(def.target_field) ? " <span style='color:#dc3545'>*</span>" : "";
+          const isReq = window.REQUIRED_FIELDS && window.REQUIRED_FIELDS.includes(def.target_field) ? " *" : "";
           const isSel = existingMap[col] === def.target_field ? "selected" : "";
           return `<option value="${def.target_field}" ${isSel}>${escapeHtml(def.display_name)}${isReq}</option>`;
         })
@@ -225,17 +234,23 @@ function renderMappingTableWithExistingModal() {
 
       return `
       <tr>
-        <td><strong>${escapeHtml(col)}</strong></td>
-        <td style="color:#666;font-style:italic;">${escapeHtml(String(currentSampleData[col] || "—").substring(0, 40))}</td>
-        <td class="arrow-col">➡️</td>
+        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;" title="${escapeHtml(col)}">
+          <strong>${escapeHtml(col)}</strong>
+        </td>
+        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;" title="${escapeHtml(String(currentSampleData[col] || "—"))}">
+          ${escapeHtml(String(currentSampleData[col] || "—").substring(0, 40))}
+        </td>
+        <td style="text-align: center;">➡️</td>
         <td>
           <select class="mapping-select" id="map_modal_${col.replace(/[^a-zA-Z0-9]/g, "_")}" data-column="${escapeHtml(col)}" onchange="updateMappingProgress()">
             <option value="">-- Select Field --</option>
             ${optionsHtml}
-            <option value="ignore" ${existingMap[col] === "ignore" ? "selected" : ""}>Do Not Import (Ignore)</option>
+            <option value="ignore" ${existingMap[col] === "ignore" ? "selected" : ""}>🚫 Ignore</option>
           </select>
         </td>
-        <td><button class="btn-sm btn-secondary" onclick="addCustomRowModal('${escapeHtml(col)}')">Add Custom Name</button></td>
+        <td style="text-align: center;">
+          <button class="btn-sm btn-secondary" onclick="addCustomRowModal('${escapeHtml(col)}')" style="padding: 4px 8px; font-size: 12px; white-space: nowrap;">✏️ Custom</button>
+        </td>
       </tr>
     `;
     })
@@ -278,6 +293,18 @@ function toggleInlineNewMapping() {
   }
 }
 
+// Helper function to show status in templates bar
+function showTemplatesStatus(message, type = "success") {
+  const statusDiv = document.getElementById("templatesInlineStatus");
+  if (statusDiv) {
+    statusDiv.innerHTML = message;
+    statusDiv.className = `templates-status ${type}`;
+    setTimeout(() => {
+      if (statusDiv) statusDiv.innerHTML = "";
+    }, 8000);
+  }
+}
+
 async function createNewMappingInline() {
   console.log("createNewMappingInline called");
 
@@ -294,6 +321,7 @@ async function createNewMappingInline() {
   }
 
   try {
+    // Check if mapping name already exists (check all templates, including empty ones)
     const checkResponse = await fetch(`/api/column-mappings/${currentMappingClientId}/names`);
     let existingMappings = [];
     if (checkResponse.ok) {
@@ -306,6 +334,7 @@ async function createNewMappingInline() {
       return;
     }
 
+    // Create new mapping template
     const createResponse = await fetch("/api/column-mappings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -328,43 +357,34 @@ async function createNewMappingInline() {
       currentExcelColumns = [];
       currentMappingsList = [];
 
-      // Refresh the mapping badges
+      // Refresh badges from server
       await loadMappingNamesModal();
 
-      // IMPORTANT: Manually show the upload area and hide the no-mapping message
-      const uploadArea = document.getElementById("uploadColumnsAreaModal");
-      const noMappingDiv = document.getElementById("noMappingSelectedModal");
-      const tableContainer = document.getElementById("mappingTableContainerModal");
-      const deleteBtn = document.getElementById("deleteMappingBtnModal");
-      const renameBtn = document.getElementById("renameMappingBtnModal");
-      const exportBtn = document.getElementById("exportTemplateBtnModal");
+      // MANUALLY ADD THE BADGE IF SERVER DIDN'T RETURN IT
+      const container = document.getElementById("mappingBadgesModal");
+      const exists = container && Array.from(container.querySelectorAll(".mapping-badge")).some((b) => b.textContent === mappingName);
 
-      if (uploadArea) uploadArea.classList.remove("hidden");
-      if (noMappingDiv) noMappingDiv.style.display = "none";
-      if (tableContainer) tableContainer.classList.add("hidden");
-      if (deleteBtn) deleteBtn.classList.remove("hidden");
-      if (renameBtn) renameBtn.classList.remove("hidden");
-      if (exportBtn) exportBtn.classList.remove("hidden");
-
-      // Show the columns status message
-      const columnsStatus = document.getElementById("columnsStatusModal");
-      if (columnsStatus) {
-        columnsStatus.innerHTML = `<p class="status-info">📋 New template "${escapeHtml(mappingName)}" created. Click "Load Columns" to upload an Excel file and define mappings.</p>`;
+      if (container && !exists) {
+        console.log("Manually adding badge for:", mappingName);
+        const badge = document.createElement("span");
+        badge.className = "mapping-badge active unsaved";
+        badge.textContent = mappingName;
+        badge.onclick = () => selectMappingModal(mappingName);
+        container.appendChild(badge);
       }
 
-      // Update the active badge to show unsaved
-      setTimeout(() => {
-        const activeBadge = document.querySelector("#mappingBadgesModal .mapping-badge.active");
-        if (activeBadge) {
-          activeBadge.classList.add("unsaved");
-        }
-      }, 100);
+      // Show the templates section
+      const selectorDiv = document.getElementById("mappingSelectorModal");
+      if (selectorDiv) selectorDiv.classList.remove("hidden");
+
+      // Open the mapping view for this new template
+      await selectMappingModal(mappingName);
     } else {
       const error = await createResponse.json();
       if (window.showToast) showToast(error.error || "Error creating mapping", "error");
     }
   } catch (err) {
-    console.error("Error:", err);
+    console.error("Error creating mapping:", err);
     if (window.showToast) showToast("Error creating mapping: " + err.message, "error");
   }
 }
@@ -393,6 +413,17 @@ function updateMappingProgress() {
     progressSpan.innerText = `Mapped: ${mappedCount} / ${selects.length}`;
   }
 
+  const percentage = selects.length > 0 ? Math.round((mappedCount / selects.length) * 100) : 0;
+  const progressFill = document.getElementById("mappingProgressFill");
+  const percentageSpan = document.getElementById("progressPercentage");
+
+  if (progressFill) {
+    progressFill.style.width = `${percentage}%`;
+  }
+  if (percentageSpan) {
+    percentageSpan.innerText = `${percentage}%`;
+  }
+
   const saveBtn = document.getElementById("saveMappingBtn");
   if (saveBtn) {
     saveBtn.disabled = mappedCount !== selects.length;
@@ -409,16 +440,66 @@ function ignoreUnmapped() {
   updateMappingProgress();
 }
 
+function setupSmartMatchDropdown() {
+  const smartMatchBtn = document.getElementById("smartMatchBtn");
+  const dropdown = document.getElementById("smartMatchDropdown");
+
+  if (!smartMatchBtn) return;
+
+  smartMatchBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle("hidden");
+  });
+
+  document.addEventListener("click", () => {
+    dropdown.classList.add("hidden");
+  });
+
+  const levels = [
+    { id: "smartMatchLevel1", threshold: 60, name: "Cautious" },
+    { id: "smartMatchLevel2", threshold: 52, name: "Moderate" },
+    { id: "smartMatchLevel3", threshold: 44, name: "Balanced" },
+    { id: "smartMatchLevel4", threshold: 36, name: "Aggressive" },
+    { id: "smartMatchLevel5", threshold: 25, name: "Maximum" },
+  ];
+
+  levels.forEach((level) => {
+    const btn = document.getElementById(level.id);
+    if (btn) {
+      btn.addEventListener("click", () => {
+        dropdown.classList.add("hidden");
+        runSmartMatchWithThreshold(level.threshold, level.name);
+      });
+    }
+  });
+
+  const resetBtn = document.getElementById("resetSmartMatchBtn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      dropdown.classList.add("hidden");
+      window.smartMatchAttempts = 0;
+      if (window.showToast) showToast("Smart Match reset to cautious mode", "info");
+    });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupSmartMatchDropdown();
+});
+
+let smartMatchAttempts = 0;
+
 async function runSmartMatch() {
-  console.log("runSmartMatch called with enhanced 4-level engine");
+  console.log("runSmartMatch called - Progressive mode");
 
   const selects = document.querySelectorAll(".mapping-select");
   if (selects.length === 0) return;
 
-  // Collect all unmapped columns with their sample data
+  smartMatchAttempts++;
+
   const unmappedColumns = [];
   const sampleDataMap = {};
-  const selectMap = {}; // Store reference to select elements
+  const selectMap = {};
 
   selects.forEach((sel) => {
     if (!sel.value || sel.value === "") {
@@ -431,20 +512,36 @@ async function runSmartMatch() {
 
   if (unmappedColumns.length === 0) {
     showToast("All columns are already mapped!", "info");
+    smartMatchAttempts = 0;
     return;
   }
 
-  showToast(`🤖 Smart matching ${unmappedColumns.length} columns using AI...`, "info");
+  let aggressivenessLevel = Math.min(smartMatchAttempts, 5);
+  let threshold = 60 - aggressivenessLevel * 8;
+  threshold = Math.max(threshold, 25);
+
+  let levelNames = {
+    1: "Cautious (60% threshold)",
+    2: "Moderate (52% threshold)",
+    3: "Balanced (44% threshold)",
+    4: "Aggressive (36% threshold)",
+    5: "Very Aggressive (28% threshold)",
+    6: "Maximum (25% threshold)",
+  };
+  let currentLevel = levelNames[aggressivenessLevel + 1] || "Maximum (25% threshold)";
+
+  showToast(`🔍 Smart Match - Attempt ${smartMatchAttempts}: ${currentLevel}`, "info");
 
   try {
-    // Call the enhanced batch smart match API
-    const response = await fetch("/api/smart-match/batch", {
+    const response = await fetch("/api/smart-match/batch-progressive", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         columns: unmappedColumns,
         clientId: currentMappingClientId,
         sampleDataMap: sampleDataMap,
+        threshold: threshold,
+        aggressivenessLevel: aggressivenessLevel,
       }),
     });
 
@@ -454,81 +551,66 @@ async function runSmartMatch() {
 
     const results = await response.json();
     let matchCount = 0;
-    let levelCounts = { "client-memory": 0, "global-memory": 0, algorithm: 0, "safety-net": 0 };
 
-    // Apply the matches
     for (const [columnName, matchedField] of Object.entries(results)) {
       if (matchedField && matchedField !== "ignore" && selectMap[columnName]) {
         selectMap[columnName].value = matchedField;
         matchCount++;
-
-        // Try to get match details from a separate call or from response
-        console.log(`✨ Smart matched: "${columnName}" → ${matchedField}`);
+        console.log(`✨ Smart matched (Level ${aggressivenessLevel + 1}): "${columnName}" → ${matchedField}`);
       }
     }
 
     updateMappingProgress();
 
-    // Show detailed summary
-    let message = `✨ Smart Match found ${matchCount} fields!`;
     if (matchCount > 0) {
-      showToast(message, "success");
+      if (unmappedColumns.length - matchCount > 0) {
+        showToast(`✨ Found ${matchCount} matches. Click Smart Match again for more (${unmappedColumns.length - matchCount} remaining)`, "success");
+      } else {
+        showToast(`✨ Successfully matched all ${matchCount} columns!`, "success");
+        smartMatchAttempts = 0;
+      }
     } else {
-      showToast(`No matches found. Try manual mapping or check your column names.`, "info");
-    }
-
-    // Optional: Fetch match details for better feedback
-    if (matchCount > 0) {
-      try {
-        const detailsPromises = unmappedColumns.map(async (col) => {
-          if (results[col]) {
-            const detailResponse = await fetch("/api/smart-match", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                columnName: col,
-                clientId: currentMappingClientId,
-                sampleData: sampleDataMap[col],
-              }),
-            });
-            if (detailResponse.ok) {
-              const detail = await detailResponse.json();
-              if (detail.matchDetails) {
-                console.log(`📊 "${col}" matched via ${detail.matchDetails.source} (${detail.matchDetails.similarity}%)`);
-              }
-            }
-          }
-        });
-        await Promise.all(detailsPromises);
-      } catch (detailErr) {
-        console.log("Could not fetch match details");
+      if (aggressivenessLevel >= 4) {
+        showToast(`No more matches found. Please map remaining columns manually.`, "info");
+        smartMatchAttempts = 0;
+      } else {
+        showToast(`No matches at ${currentLevel}. Click Smart Match again for lower threshold.`, "info");
       }
     }
   } catch (err) {
     console.error("Smart match error:", err);
     showToast("Error during smart match: " + err.message, "error");
-
-    // Fallback to basic auto-map if enhanced matching fails
-    console.log("Falling back to basic auto-map...");
-    let fallbackCount = 0;
-    selects.forEach((sel) => {
-      if (!sel.value || sel.value === "") {
-        const colName = sel.getAttribute("data-column");
-        if (window.attemptAutoMap) {
-          const suggestedMatch = window.attemptAutoMap(colName);
-          if (suggestedMatch) {
-            sel.value = suggestedMatch;
-            fallbackCount++;
-          }
-        }
-      }
-    });
-    updateMappingProgress();
-    if (fallbackCount > 0) {
-      showToast(`⚠️ Using basic match: ${fallbackCount} fields mapped.`, "warning");
-    }
+    smartMatchAttempts = 0;
   }
 }
+
+function resetSmartMatch() {
+  smartMatchAttempts = 0;
+  showToast("Smart Match reset to cautious mode", "info");
+}
+
+function addSmartMatchResetButton() {
+  const smartMatchBtn = document.getElementById("smartMatchBtn");
+  if (smartMatchBtn && !document.getElementById("resetSmartMatchBtn")) {
+    const resetBtn = document.createElement("button");
+    resetBtn.id = "resetSmartMatchBtn";
+    resetBtn.className = "btn-secondary";
+    resetBtn.style.marginLeft = "8px";
+    resetBtn.style.padding = "6px 12px";
+    resetBtn.style.fontSize = "12px";
+    resetBtn.innerHTML = "🔄 Reset";
+    resetBtn.title = "Reset smart match to cautious mode";
+    resetBtn.onclick = resetSmartMatch;
+    smartMatchBtn.parentNode.appendChild(resetBtn);
+  }
+}
+
+const originalOpenMappingsModal = window.openMappingsModal;
+window.openMappingsModal = function () {
+  smartMatchAttempts = 0;
+  if (originalOpenMappingsModal) originalOpenMappingsModal();
+  setTimeout(addSmartMatchResetButton, 500);
+};
 
 function addCustomRowModal(columnName) {
   const customField = prompt(`Enter custom field name for "${columnName}":`, columnName);
@@ -591,6 +673,7 @@ async function saveMappingsModal() {
     });
 
     if (response.ok) {
+      showTemplatesStatus(`✅ Mappings saved to "${escapeHtml(currentMappingName)}"`, "success");
       if (window.showToast) showToast(`Mappings saved to "${currentMappingName}"`, "success");
       await loadMappingNamesModal();
 
@@ -598,9 +681,11 @@ async function saveMappingsModal() {
       if (activeBadge) activeBadge.classList.remove("unsaved");
     } else {
       const error = await response.json();
+      showTemplatesStatus(`Error: ${escapeHtml(error.error || "Error saving mappings")}`, "error");
       if (window.showToast) showToast(error.error || "Error saving mappings", "error");
     }
   } catch (err) {
+    showTemplatesStatus(`Error: ${escapeHtml(err.message)}`, "error");
     if (window.showToast) showToast("Error saving mappings: " + err.message, "error");
   }
 }
@@ -771,7 +856,7 @@ function setupFileUpload() {
 
       const formData = new FormData();
       formData.append("excel", file);
-      if (window.showToast) showToast("Loading columns...", "info");
+      showTemplatesStatus("📤 Loading columns...", "info");
 
       try {
         const response = await fetch("/api/get-excel-columns", { method: "POST", body: formData });
@@ -781,20 +866,18 @@ function setupFileUpload() {
           currentExcelColumns = result.columns;
           currentSampleData = result.sampleData || {};
 
-          // Store column info for smart matching
           window.currentExcelColumns = currentExcelColumns;
           window.currentSampleData = currentSampleData;
 
-          document.getElementById("columnsStatusModal").innerHTML =
-            `<p class="status-success">✅ Loaded ${result.columns.length} columns from "${escapeHtml(file.name)}" (${result.rowCount} rows)</p>`;
+          showTemplatesStatus(`✅ Loaded ${result.columns.length} columns from "${escapeHtml(file.name)}" (${result.rowCount} rows)`, "success");
           renderMappingTableWithExistingModal();
           document.getElementById("mappingTableContainerModal").classList.remove("hidden");
           if (window.showToast) showToast(`Loaded ${result.columns.length} columns. Click "Smart Match" to auto-map!`, "success");
         } else {
-          if (window.showToast) showToast("Error: " + result.error, "error");
+          showTemplatesStatus(`Error: ${escapeHtml(result.error)}`, "error");
         }
       } catch (err) {
-        if (window.showToast) showToast("Error: " + err.message, "error");
+        showTemplatesStatus(`Error: ${escapeHtml(err.message)}`, "error");
       }
       e.target.value = "";
     };
@@ -850,11 +933,6 @@ document.addEventListener("DOMContentLoaded", function () {
     cancelBtn.onclick = () => cancelNewMapping();
   }
 
-  const closeModalBtn = document.getElementById("closeMappingModalBtn");
-  if (closeModalBtn) {
-    closeModalBtn.onclick = () => closeMappingsModal();
-  }
-
   const renameBtn = document.getElementById("renameMappingBtnModal");
   if (renameBtn) {
     renameBtn.onclick = (e) => {
@@ -883,12 +961,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const saveBtn = document.getElementById("saveMappingBtn");
   if (saveBtn) {
-    saveBtn.onclick = () => saveMappingsModal();
+    saveBtn.onclick = () => {
+      saveMappingsModal();
+      document.getElementById("mappingTableContainerModal").classList.add("hidden");
+      document.getElementById("uploadColumnsAreaModal").classList.add("hidden");
+      document.getElementById("noMappingSelectedModal").style.display = "block";
+      currentMappingName = null;
+      loadMappingNamesModal();
+    };
   }
 
   const cancelMappingBtn = document.getElementById("cancelMappingBtn");
   if (cancelMappingBtn) {
-    cancelMappingBtn.onclick = () => cancelMappingModal();
+    cancelMappingBtn.onclick = () => {
+      document.getElementById("mappingTableContainerModal").classList.add("hidden");
+      document.getElementById("uploadColumnsAreaModal").classList.add("hidden");
+      document.getElementById("noMappingSelectedModal").style.display = "block";
+      currentMappingName = null;
+      loadMappingNamesModal();
+    };
+  }
+
+  const closeModalBtn = document.getElementById("closeMappingModalBtn");
+  if (closeModalBtn) {
+    closeModalBtn.onclick = () => {
+      closeMappingsModal();
+    };
   }
 
   const smartBtn = document.getElementById("smartMatchBtn");
