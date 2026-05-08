@@ -463,40 +463,55 @@ function closeProjectModal() {
   document.getElementById("projectModal").style.display = "none";
 }
 
-/**
- * Deletes all selected projects after confirmation
- */
+// Deletes all selected projects after confirmation
 async function bulkDeleteProjects() {
   const checkboxes = document.querySelectorAll(".project-select-cb:checked");
   if (checkboxes.length === 0) {
     showToast("Please select at least one project.", "info");
     return;
   }
-  if (!confirm(`Delete ${checkboxes.length} selected project(s)?`)) return;
 
-  let successCount = 0,
-    failCount = 0;
-  for (let cb of checkboxes) {
-    try {
-      const response = await fetch(`/api/projects/${cb.value}`, { method: "DELETE" });
-      if (response.ok) successCount++;
-      else failCount++;
-    } catch (e) {
-      failCount++;
-    }
-  }
+  const confirmed = await showConfirmation({
+    title: "Delete Projects",
+    message: `Delete ${checkboxes.length} selected project(s)?`,
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    danger: true,
+  });
 
-  if (failCount > 0) {
-    showToast(`Deleted ${successCount} projects, ${failCount} failed.`, "warning");
-  } else {
-    showToast(`Successfully deleted ${successCount} project(s)`, "success");
-  }
+  if (!confirmed) return;
 
-  await loadProjects();
+  const deleteBtn = document.getElementById("bulkDeleteProjectsBtn");
 
-  // Uncheck the master checkbox after delete
-  const masterCheckbox = document.getElementById("selectAllProjects");
-  if (masterCheckbox) masterCheckbox.checked = false;
+  await withLoading(
+    deleteBtn,
+    async () => {
+      let successCount = 0,
+        failCount = 0;
+      showToast("⏳ Deleting projects...", "info");
+
+      for (let cb of checkboxes) {
+        try {
+          const response = await fetch(`/api/projects/${cb.value}`, { method: "DELETE" });
+          if (response.ok) successCount++;
+          else failCount++;
+        } catch (e) {
+          failCount++;
+        }
+      }
+
+      if (failCount > 0) {
+        showToast(`Deleted ${successCount} projects, ${failCount} failed.`, "warning");
+      } else {
+        showToast(`Successfully deleted ${successCount} project(s)`, "success");
+      }
+
+      await loadProjects();
+      const masterCheckbox = document.getElementById("selectAllProjects");
+      if (masterCheckbox) masterCheckbox.checked = false;
+    },
+    "Deleting...",
+  );
 }
 
 /**

@@ -270,6 +270,7 @@ function openMappingsModal() {
   loadMappingClientDropdownModal();
 }
 
+// Update closeMappingsModal function:
 function closeMappingsModal() {
   console.log("closeMappingsModal called");
   const modal = document.getElementById("mappingsModal");
@@ -277,6 +278,11 @@ function closeMappingsModal() {
     modal.style.display = "none";
   }
   resetMappingUIModal();
+
+  // Refresh mapping templates dropdown in projects tab
+  if (window.loadProjectMappingTemplates) {
+    window.loadProjectMappingTemplates();
+  }
 }
 
 function toggleInlineNewMapping() {

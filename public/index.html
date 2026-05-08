@@ -10,7 +10,7 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>🏛️ Admin Control Hub - In Progress - Test v2.2</h1>
+        <h1>🏛️ Admin Control Hub - In Progress v2.5</h1>
         <div class="subtitle">Centralized Management for Clients, Assessment Types, Projects & Surveys</div>
       </div>
 
@@ -29,7 +29,7 @@
               <button id="showActiveClientsBtn">Show Active</button>
               <button id="showAllClientsBtn" class="btn-secondary">Show All</button>
             </div>
-            <button id="addClientBtn" class="btn-success">+ Add New Client</button>
+            <button id="addClientBtn" class="btn-success">+ Add New</button>
           </div>
           <div class="table-wrapper">
             <table class="data-table">
@@ -426,6 +426,23 @@
             <button id="copyProjectBtnModal" class="btn-warning">Duplicate</button>
             <button id="saveProjectAndAddNextBtn" class="btn-success">Save & Add Another</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIRMATION MODAL - Reusable -->
+    <div id="confirmationModal" class="modal">
+      <div class="modal-content" style="max-width: 450px">
+        <div class="modal-header" id="confirmationModalHeader">
+          <h2 id="confirmationModalTitle">Confirm Action</h2>
+          <span class="close" data-modal="confirmationModal">&times;</span>
+        </div>
+        <div id="confirmationModalBody" style="padding: 20px 0">
+          <p id="confirmationMessage">Are you sure?</p>
+        </div>
+        <div class="modal-footer" style="justify-content: center; gap: 15px">
+          <button id="confirmationCancelBtn" class="btn-secondary" style="min-width: 100px">Cancel</button>
+          <button id="confirmationConfirmBtn" class="btn-danger" style="min-width: 100px">Confirm</button>
         </div>
       </div>
     </div>

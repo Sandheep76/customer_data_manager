@@ -87,7 +87,7 @@ function renderAssessTypesPage() {
       <td style="text-align: center;"><input type="checkbox" class="assess-select-cb" value="${at.id}" onclick="event.stopPropagation()"></td>
       <td class="ci-number">${escapeHtml(at.assess_type)}</td>
       <td>${at.is_active ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>'}</td>
-      <td>${escapeHtml(displayClientName)} ${at.is_default ? '<span class="badge-default">Default</span>' : ""}</td>
+      <td>${escapeHtml(displayClientName)} ${at.is_default ? '<span class="default-star" title="Default assessment type for this client">✅</span>' : ""}</td>
       <td>${escapeHtml(at.assess_full_name) || "—"}</td>
       <td>v${at.assess_version}</td>
       <td style="text-align: right;"></td>
@@ -275,32 +275,119 @@ function closeAssessTypeModal() {
   document.getElementById("assessTypeModal").style.display = "none";
 }
 
+// Update bulkDeleteAssessTypes function:
 async function bulkDeleteAssessTypes() {
   const checkboxes = document.querySelectorAll(".assess-select-cb:checked");
   if (checkboxes.length === 0) {
     showToast("Please select at least one assessment type.", "info");
     return;
   }
-  if (!confirm(`Delete ${checkboxes.length} selected assessment type(s)?`)) return;
-  let successCount = 0,
-    failCount = 0;
-  for (let cb of checkboxes) {
-    try {
-      const response = await fetch(`/api/assess-types/${cb.value}`, { method: "DELETE" });
-      if (response.ok) successCount++;
-      else failCount++;
-    } catch (e) {
-      failCount++;
-    }
+
+  const confirmed = await showConfirmation({
+    title: "Delete Assessment Types",
+    message: `Delete ${checkboxes.length} selected assessment type(s)?`,
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    danger: true,
+  });
+
+  if (!confirmed) return;
+
+  const deleteBtn = document.getElementById("bulkDeleteAssessTypesBtn");
+
+  await withLoading(
+    deleteBtn,
+    async () => {
+      let successCount = 0,
+        failCount = 0;
+      showToast("⏳ Deleting assessment types...", "info");
+
+      for (let cb of checkboxes) {
+        try {
+          const response = await fetch(`/api/assess-types/${cb.value}`, { method: "DELETE" });
+          if (response.ok) successCount++;
+          else failCount++;
+        } catch (e) {
+          failCount++;
+        }
+      }
+
+      if (failCount > 0) {
+        showToast(`Deleted ${successCount} assess types, ${failCount} failed.`, "warning");
+      } else {
+        showToast(`Successfully deleted ${successCount} assess type(s)`, "success");
+      }
+
+      await loadAssessTypesList(showAllAssessTypes);
+      const masterCheckbox = document.getElementById("selectAllAssessTypes");
+      if (masterCheckbox) masterCheckbox.checked = false;
+    },
+    "Deleting...",
+  );
+}
+
+// Update saveAssessType function with loading:
+async function saveAssessType() {
+  const id = document.getElementById("assessTypeId").value;
+  const saveBtn = document.getElementById("saveAssessTypeBtn");
+  const modalSelect = document.getElementById("assessTypeClientSelectModal");
+  const clientId = modalSelect.value;
+
+  if (!clientId) {
+    showToast("Please select a client", "error");
+    return;
   }
-  if (failCount > 0) showToast(`Deleted ${successCount} assess types, ${failCount} failed.`, "warning");
-  else showToast(`Successfully deleted ${successCount} assess type(s)`, "success");
 
-  await loadAssessTypesList(showAllAssessTypes);
+  const assessTypeData = {
+    client_id: parseInt(clientId),
+    assess_type: document.getElementById("assessTypeCode").value,
+    assess_full_name: document.getElementById("assessFullName").value,
+    name_on_report: document.getElementById("nameOnReport").value,
+    assess_version: parseInt(document.getElementById("assessTypeVersion").value),
+    assess_type_description: document.getElementById("assessTypeDescription").value,
+    is_default: document.getElementById("assessTypeIsDefault").checked,
+    is_active: document.getElementById("assessTypeIsActive").checked,
+    created_by: "admin",
+  };
 
-  // Uncheck the master checkbox after delete
-  const masterCheckbox = document.getElementById("selectAllAssessTypes");
-  if (masterCheckbox) masterCheckbox.checked = false;
+  if (!assessTypeData.assess_type) {
+    showToast("Assessment Type Code is required", "error");
+    return;
+  }
+
+  await withLoading(
+    saveBtn,
+    async () => {
+      try {
+        let response;
+        if (id) {
+          response = await fetch(`/api/assess-types/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(assessTypeData),
+          });
+        } else {
+          response = await fetch("/api/assess-types", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(assessTypeData),
+          });
+        }
+
+        if (response.ok) {
+          showToast(id ? "Assessment Type updated" : "Assessment Type added", "success");
+          closeAssessTypeModal();
+          await loadAssessTypesList(showAllAssessTypes);
+        } else {
+          const error = await response.json();
+          showToast("Error: " + (error.error || "Unknown error"), "error");
+        }
+      } catch (err) {
+        showToast("Error saving assessment type: " + err.message, "error");
+      }
+    },
+    "Saving...",
+  );
 }
 
 function makeCopyAssessFromModal() {

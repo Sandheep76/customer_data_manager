@@ -236,32 +236,139 @@ function closeClientModal() {
   document.getElementById("clientModal").style.display = "none";
 }
 
+// Change button text in loadClientsList function (find and update)
+// No change needed - button text remains "Show Active" / "Show All"
+
+// Update bulkDeleteClients function:
 async function bulkDeleteClients() {
   const checkboxes = document.querySelectorAll(".client-select-cb:checked");
   if (checkboxes.length === 0) {
     showToast("Please select at least one client.", "info");
     return;
   }
-  if (!confirm(`Delete ${checkboxes.length} selected client(s)? This will also delete their projects and data.`)) return;
-  let successCount = 0,
-    failCount = 0;
-  for (let cb of checkboxes) {
-    try {
-      const response = await fetch(`/api/clients/${cb.value}`, { method: "DELETE" });
-      if (response.ok) successCount++;
-      else failCount++;
-    } catch (e) {
-      failCount++;
-    }
+
+  // Use custom confirmation modal
+  const confirmed = await showConfirmation({
+    title: "Delete Clients",
+    message: `Delete ${checkboxes.length} selected client(s)? This will also delete their projects and data.`,
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    danger: true,
+  });
+
+  if (!confirmed) return;
+
+  const deleteBtn = document.getElementById("bulkDeleteClientsBtn");
+
+  await withLoading(
+    deleteBtn,
+    async () => {
+      let successCount = 0,
+        failCount = 0;
+      showToast("⏳ Deleting clients...", "info");
+
+      for (let cb of checkboxes) {
+        try {
+          const response = await fetch(`/api/clients/${cb.value}`, { method: "DELETE" });
+          if (response.ok) successCount++;
+          else failCount++;
+        } catch (e) {
+          failCount++;
+        }
+      }
+
+      if (failCount > 0) {
+        showToast(`Deleted ${successCount} clients, ${failCount} failed.`, "warning");
+      } else {
+        showToast(`Successfully deleted ${successCount} client(s)`, "success");
+      }
+
+      await loadClientsList(showAllClients);
+      const masterCheckbox = document.getElementById("selectAllClients");
+      if (masterCheckbox) masterCheckbox.checked = false;
+      if (window.loadClientDropdown) window.loadClientDropdown();
+      if (window.loadAssessTypeClientDropdown) window.loadAssessTypeClientDropdown();
+    },
+    "Deleting...",
+  );
+}
+
+// Update saveClient function with loading state:
+async function saveClient() {
+  const clientId = document.getElementById("clientId").value;
+  const saveBtn = document.getElementById("saveClientBtn");
+
+  const clientData = {
+    client_name: document.getElementById("clientName").value,
+    client_abbreviation: document.getElementById("clientAbbreviation").value,
+    industry: document.getElementById("clientIndustry").value,
+    contact_person: document.getElementById("clientContactPerson").value,
+    contact_email: document.getElementById("clientContactEmail").value,
+    contact_phone: document.getElementById("clientContactPhone").value,
+    default_cust_country: document.getElementById("clientDefaultCustCountry").value,
+    default_job_country: document.getElementById("clientDefaultJobCountry").value,
+    is_active: document.getElementById("clientIsActive").checked,
+  };
+
+  if (!clientData.client_name) {
+    showToast("Client Name is required", "error");
+    return;
   }
-  if (failCount > 0) showToast(`Deleted ${successCount} clients, ${failCount} failed.`, "warning");
-  else showToast(`Successfully deleted ${successCount} client(s)`, "success");
-  loadClientsList(showAllClients);
-  // Uncheck the master checkbox after delete
-  const masterCheckbox = document.getElementById("selectAllClients");
-  if (masterCheckbox) masterCheckbox.checked = false;
-  if (window.loadClientDropdown) window.loadClientDropdown();
-  if (window.loadAssessTypeClientDropdown) window.loadAssessTypeClientDropdown();
+
+  await withLoading(
+    saveBtn,
+    async () => {
+      try {
+        let response;
+        if (clientId) {
+          response = await fetch(`/api/clients/${clientId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(clientData),
+          });
+        } else {
+          response = await fetch("/api/clients", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(clientData),
+          });
+        }
+
+        if (response.ok) {
+          const savedClient = await response.json();
+          const finalClientId = clientId || savedClient.id;
+          const logoAction = document.getElementById("logoAction").value;
+
+          try {
+            if (logoAction === "remove" && clientId) {
+              await fetch(`/api/clients/${finalClientId}/logo`, { method: "DELETE" });
+            } else if (logoAction === "upload") {
+              const logoFile = document.getElementById("editClientLogoFile").files[0];
+              if (logoFile) {
+                const formData = new FormData();
+                formData.append("logo", logoFile);
+                await fetch(`/api/clients/${finalClientId}/logo`, { method: "POST", body: formData });
+              }
+            }
+          } catch (e) {
+            console.error("Logo sync failed", e);
+          }
+
+          showToast(clientId ? "Client updated" : "Client added", "success");
+          closeClientModal();
+          await loadClientsList(showAllClients);
+          if (window.loadClientDropdown) window.loadClientDropdown();
+          if (window.loadAssessTypeClientDropdown) window.loadAssessTypeClientDropdown();
+        } else {
+          const error = await response.json();
+          showToast("Error: " + (error.error || "Unknown error"), "error");
+        }
+      } catch (err) {
+        showToast("Error saving client: " + err.message, "error");
+      }
+    },
+    "Saving...",
+  );
 }
 
 function makeCopyClientFromModal() {

@@ -163,6 +163,104 @@ function initApp() {
   });
 }
 
+// ==================== CONFIRMATION MODAL ====================
+let confirmationResolve = null;
+
+function showConfirmation(options = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("confirmationModal");
+    const titleEl = document.getElementById("confirmationModalTitle");
+    const messageEl = document.getElementById("confirmationMessage");
+    const confirmBtn = document.getElementById("confirmationConfirmBtn");
+    const cancelBtn = document.getElementById("confirmationCancelBtn");
+    const closeSpan = document.querySelector("#confirmationModal .close");
+    const modalHeader = document.getElementById("confirmationModalHeader");
+
+    // Set values
+    titleEl.textContent = options.title || "Confirm Action";
+    messageEl.textContent = options.message || "Are you sure?";
+    confirmBtn.textContent = options.confirmText || "Confirm";
+    cancelBtn.textContent = options.cancelText || "Cancel";
+
+    // Set button style based on danger flag
+    if (options.danger) {
+      confirmBtn.className = "btn-danger";
+    } else {
+      confirmBtn.className = "btn-warning";
+    }
+
+    // Set header color based on danger
+    if (options.danger) {
+      modalHeader.style.background = "linear-gradient(135deg, #dc3545 0%, #b02a37 100%)";
+    } else {
+      modalHeader.style.background = "linear-gradient(135deg, #1a73e8 0%, #0d5bbf 100%)";
+    }
+    modalHeader.style.color = "white";
+    modalHeader.style.margin = "-20px -20px 0 -20px";
+    modalHeader.style.padding = "16px 24px";
+    modalHeader.style.borderRadius = "12px 12px 0 0";
+
+    // Store resolve function
+    confirmationResolve = resolve;
+
+    // Show modal
+    modal.style.display = "block";
+
+    // Handle confirm
+    const onConfirm = () => {
+      cleanup();
+      resolve(true);
+      modal.style.display = "none";
+    };
+
+    // Handle cancel
+    const onCancel = () => {
+      cleanup();
+      resolve(false);
+      modal.style.display = "none";
+    };
+
+    // Cleanup event listeners
+    const cleanup = () => {
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+      closeSpan?.removeEventListener("click", onCancel);
+    };
+
+    // Add event listeners
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+    closeSpan?.addEventListener("click", onCancel);
+
+    // Close on outside click
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        onCancel();
+      }
+    });
+  });
+}
+
+// Helper function to disable/enable buttons during async operations
+async function withLoading(button, callback, loadingText = "Processing...") {
+  const originalText = button.textContent;
+  const wasDisabled = button.disabled;
+
+  button.disabled = true;
+  button.textContent = loadingText;
+
+  try {
+    return await callback();
+  } finally {
+    button.disabled = wasDisabled;
+    button.textContent = originalText;
+  }
+}
+
+// Export to window
+window.showConfirmation = showConfirmation;
+window.withLoading = withLoading;
+
 // Export to window
 window.initApp = initApp;
 window.escapeHtml = escapeHtml;
